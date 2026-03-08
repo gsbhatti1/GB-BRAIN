@@ -1,0 +1,93 @@
+{
+  "elite": [
+    "trading strategy language:Python stars:>500",
+    "algorithmic trading language:Python stars:>500",
+    "quantitative trading language:Python stars:>500",
+    "backtest trading strategy language:Python stars:>500",
+    "trading strategy language:PineScript stars:>300",
+    "systematic trading language:Python stars:>500",
+    "high frequency trading language:Python stars:>300"
+  ],
+  "crypto": [
+    "BTC ETH trading strategy language:PineScript stars:>50",
+    "SOL XRP crypto strategy language:PineScript stars:>20",
+    "crypto trading bot language:Python stars:>100",
+    "crypto trading bot language:Python stars:>30",
+    "futures crypto strategy language:Python stars:>30",
+    "bitcoin trading strategy language:Python stars:>50",
+    "ethereum defi strategy language:Python stars:>20",
+    "crypto scalping strategy language:PineScript stars:>15",
+    "crypto momentum strategy language:Python stars:>20",
+    "binance futures trading bot language:Python stars:>50",
+    "bybit okx trading strategy language:Python stars:>20",
+    "crypto grid trading bot language:Python stars:>20",
+    "crypto arbitrage strategy language:Python stars:>30"
+  ],
+  "indices": [
+    "US30 NAS100 SPX500 trading strategy language:PineScript stars:>20",
+    "SPX SPY index trading strategy language:Python stars:>30",
+    "NAS100 NASDAQ trading strategy language:PineScript stars:>15",
+    "Dow Jones US30 strategy language:PineScript stars:>10",
+    "S&P500 futures strategy language:Python stars:>30",
+    "index CFD swing trading language:PineScript stars:>10",
+    "ES NQ futures trading system language:Python stars:>20",
+    "stock index breakout strategy language:Python stars:>20"
+  ],
+  "indicators": [
+    "EMA RSI MACD trading strategy language:PineScript stars:>20",
+    "EMA RSI MACD trading strategy language:Python stars:>20",
+    "VWAP trading strategy language:PineScript stars:>15",
+    "Bollinger Bands RSI strategy language:PineScript stars:>15",
+    "ATR trailing stop strategy language:PineScript stars:>10",
+    "Stochastic RSI strategy language:PineScript stars:>10",
+    "supertrend strategy language:PineScript stars:>15",
+    "ichimoku cloud trading language:PineScript stars:>10",
+    "MACD crossover strategy language:Python stars:>20",
+    "moving average crossover strategy language:PineScript stars:>20"
+  ],
+  "strategy_types": [
+    "momentum trading strategy language:Python stars:>50",
+    "mean reversion strategy language:Python stars:>30",
+    "breakout trading strategy language:PineScript stars:>20",
+    "scalping strategy language:PineScript stars:>20",
+    "swing trading strategy language:PineScript stars:>20",
+    "trend following strategy language:Python stars:>50",
+    "pairs trading strategy language:Python stars:>30",
+    "market making strategy language:Python stars:>30",
+    "statistical arbitrage language:Python stars:>30"
+  ],
+  "machine_learning": [
+    "machine learning trading strategy language:Python stars:>100",
+    "LSTM trading prediction language:Python stars:>50",
+    "reinforcement learning trading language:Python stars:>50",
+    "XGBoost trading strategy language:Python stars:>30",
+    "neural network stock trading language:Python stars:>50",
+    "deep learning crypto trading language:Python stars:>30"
+  ],
+  "topics": [
+    "topic:pinescript topic:trading-strategy stars:>20",
+    "topic:trading-bot topic:cryptocurrency stars:>30",
+    "topic:backtesting topic:trading stars:>50 language:Python",
+    "topic:quantitative-finance language:Python stars:>100",
+    "topic:algorithmic-trading language:Python stars:>50",
+    "topic:forex topic:trading language:Python stars:>20",
+    "topic:crypto topic:strategy language:PineScript stars:>15",
+    "topic:futures topic:trading language:Python stars:>20"
+  ],
+  "gems": [
+    "algorithmic trading crypto language:Python stars:>10",
+    "backtest trading strategy language:Python stars:>10",
+    "trading strategy language:PineScript stars:>5 pushed:>2024-01-01",
+    "crypto bot strategy language:Python stars:>5 pushed:>2024-06-01",
+    "NAS100 US30 strategy language:PineScript stars:>5"
+  ],
+  "frameworks": [
+    "freqtrade strategy language:Python stars:>20",
+    "backtrader strategy language:Python stars:>20",
+    "jesse trading strategy language:Python stars:>10",
+    "zipline trading strategy language:Python stars:>20",
+    "vectorbt strategy language:Python stars:>20",
+    "nautilus trader strategy language:Python stars:>20",
+    "hummingbot strategy language:Python stars:>20"
+  ]
+}

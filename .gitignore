@@ -1,0 +1,45 @@
+# ── Secrets ──────────────────────────────────
+.env
+config/secrets.py
+
+# ── Database ─────────────────────────────────
+db/*.db
+db/*.db-journal
+
+# ── Data Cache ───────────────────────────────
+backtest/data_cache/*.csv
+backtest/data_cache/*.parquet
+
+# ── Strategy Staging (downloaded raw files) ──
+strategies/staging/*
+!strategies/staging/.gitkeep
+
+# ── Reports (generated) ─────────────────────
+monitor/reports/*.xlsx
+monitor/reports/*.pdf
+
+# ── Python ───────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+
+# ── Logs ─────────────────────────────────────
+*.log
+logs/
+
+# ── IDE ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
