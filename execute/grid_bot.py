@@ -210,7 +210,9 @@ class GridBot:
         if not data:
             return None
 
-        df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume", "volCcy"])
+        df = pd.DataFrame(data)
+        df = df.iloc[:, :7]
+        df.columns = ["timestamp", "open", "high", "low", "close", "volume", "volCcy"]
         df["timestamp"] = pd.to_datetime(df["timestamp"].astype(int), unit="ms")
         df.set_index("timestamp", inplace=True)
         for c in ["open", "high", "low", "close", "volume"]:
