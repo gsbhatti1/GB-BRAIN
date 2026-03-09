@@ -149,19 +149,21 @@ class BloFinBridge:
     def get_balance(self):
         """Get account balance."""
         result = self._get("/api/v1/account/balance")
-        data = result.get("data", [{}])
+        data = result.get("data", {})
+        if isinstance(data, list):
+            data = data[0] if data else {}
         if data:
             return {
-                "equity": float(data[0].get("totalEquity", 0)),
-                "available": float(data[0].get("availableBalance", 0)),
-                "pnl": float(data[0].get("unrealizedPnl", 0)),
+                "equity": float(data.get("totalEquity", 0)),
+                "available": float(data.get("details", [{}])[0].get("available", 0) if data.get("details") else 0),
+                "pnl": float(data.get("details", [{}])[0].get("isolatedUnrealizedPnl", 0) if data.get("details") else 0),
             }
         return {"equity": 0, "available": 0, "pnl": 0}
 
     def get_price(self, symbol):
         """Get last price for a symbol."""
         inst = self._resolve(symbol)
-        result = self._get("/api/v1/market/ticker", {"instId": inst})
+        result = self._get("/api/v1/market/tickers", {"instId": inst})
         data = result.get("data", [{}])
         if data:
             return float(data[0].get("lastPrice", 0))
