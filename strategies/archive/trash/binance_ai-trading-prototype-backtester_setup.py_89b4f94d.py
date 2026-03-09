@@ -1,0 +1,17 @@
+# SOURCE: https://github.com/binance/ai-trading-prototype-backtester
+# FILE  : setup.py
+
+from setuptools import setup
+
+setup(
+    name="aitradingprototypebacktester",
+    version="1.0.4",
+    description="AI Trading Prototype Backtester",
+    author="Binance",
+    packages=["aitradingprototypebacktester"],
+    entry_points={
+        "console_scripts": [
+            "aitradingprototypebacktester = aitradingprototypebacktester.main:main",
+        ],
+    },
+)

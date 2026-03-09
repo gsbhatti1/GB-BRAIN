@@ -1,0 +1,238 @@
+# SOURCE: https://github.com/hasnocool/tradingview-pine-scripts
+# FILE  : 2x take profit, move stop loss to entry.pine
+
+Script Name: 2x take profit, move stop loss to entry
+Author: fpsd4ve
+Description: Two take profit targets moving stop loss to entry after first take profit hit 
+
+This strategy shows a method to achieve the following trade management:
+
+1) Open a position with two take profit targets
+2) When first take profit is hit, move the stop loss to entry price
+3) Position is closed when either second take profit is hit or position is stopped out at entry
+
+...
+PineScript code:
+
+Pine Script™ strategy
+2x take profit, move stop loss to entry
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © fpsd4ve
+//@version=5
+// Add Bollinger Bands indicator (close, 20, 2) manually to visualise trading conditions
+strategy("2xTP, SL to entry", 
+     overlay=false,
+     pyramiding=0,
+     calc_on_every_tick=false,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=25,
+     initial_capital=1000,
+     commission_type=strategy.commission.percent,
+     commission_value=0.01
+     )
+// PARAMETERS
+// Assumes quote currency is FIAT as with BTC/USDT pair
+tp1=input.float(200, title="Take Profit 1")
+tp2=input.float(500, title="Take Profit 2")
+sl=input.float(200, title="Stop Loss")
+stOBOS = input.bool(true, title="Use Stochastic overbought/oversold threshold")
+// Colors
+colorRed = #FF2052
+colorGreen = #66FF00
+// FUNCTIONS
+// Stochastic
+f_stochastic() =>
+    stoch = ta.stoch(close, high, low, 14)
+    stoch_K = ta.sma(stoch, 3)
+    stoch_D = ta.sma(stoch_K, 3)
+    stRD = ta.crossunder(stoch_K, stoch_D)
+    stGD = ta.crossover(stoch_K, stoch_D)
+    [stoch_K, stoch_D, stRD, stGD]
+// VARIABLES
+[bbMiddle, bbUpper, bbLower] = ta.bb(close, 20, 2)
+[stoch_K, stoch_D, stRD, stGD] = f_stochastic()
+// ORDERS
+// Active Orders
+// Check if strategy has open positions
+inLong = strategy.position_size > 0
+inShort = strategy.position_size < 0
+// Check if strategy reduced position size in last bar
+longClose = strategy.position_size < strategy.position_size[1]
+shortClose = strategy.position_size > strategy.position_size[1]
+// Entry Conditions
+// Enter long when during last candle these conditions are true:
+// Candle high is greater than upper Bollinger Band
+// Stochastic K line crosses under D line and is oversold
+longCondition = stOBOS ?
+     low[1] < bbLower[1] and stGD[1] and stoch_K[1] < 25 :
+     low[1] < bbLower[1] and stGD[1]
+// Enter short when during last candle these conditions are true:
+// Candle low is lower than lower Bollinger Band
+// Stochastic K line crosses over D line and is overbought
+shortCondition = stOBOS ?
+     high[1] > bbUpper[1] and stRD[1] and stoch_K[1] > 75 :
+     high[1] > bbUpper[1] and stRD[1]
+// Exit Conditions
+// Calculate Take Profit 
+longTP1 = strategy.position_avg_price + tp1
+longTP2 = strategy.position_avg_price + tp2
+shortTP1 = strategy.position_avg_price - tp1
+shortTP2 = strategy.position_avg_price - tp2
+// Calculate Stop Loss
+// Initialise variables
+var float longSL = 0.0
+var float shortSL = 0.0
+// When not in position, set stop loss using close price which is the price used during backtesting
+// When in a position, check to see if the position was reduced on the last bar
+// If it was, set stop loss to position entry price. Otherwise, maintain last stop loss value
+longSL := if inLong and ta.barssince(longClose) < ta.barssince(longCondition)
+    strategy.position_avg_price
+else if inLong
+    longSL[1]
+else
+    close - sl
+shortSL := if inShort and ta.barssince(shortClose) < ta.barssince(shortCondition)
+    strategy.position_avg_price
+else if inShort
+    shortSL[1]
+else
+    close + sl
+// Manage positions
+strategy.entry("Long", strategy.long, when=longCondition)
+strategy.exit("TP1/SL", from_entry="Long", qty_percent=50, limit=longTP1, stop=longSL)
+strategy.exit("TP2/SL", from_entry="Long", limit=longTP2, stop=longSL)
+strategy.entry("Short", strategy.short, when=shortCondition)
+strategy.exit("TP1/SL", from_entry="Short", qty_percent=50, limit=shortTP1, stop=shortSL)
+strategy.exit("TP2/SL", from_entry="Short", limit=shortTP2, stop=shortSL)
+// DRAW
+// Stochastic Chart
+plot(stoch_K, color=color.blue)
+plot(stoch_D, color=color.orange)
+// Circles
+plot(stOBOS ? stRD and stoch_K >= 75 ? stoch_D : na : stRD ? stoch_D : na, color=colorRed, style=plot.style_circles, linewidth=3)
+plot(stOBOS ? stGD and stoch_K <= 25 ? stoch_D : na : stGD ? stoch_K : na, color=colorGreen, style=plot.style_circles, linewidth=3)
+// Levels
+hline(75, linestyle=hline.style_dotted)
+hline(25, linestyle=hline.style_dotted)
+Expand (120 lines)

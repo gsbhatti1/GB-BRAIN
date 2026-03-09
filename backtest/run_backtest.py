@@ -209,42 +209,83 @@ def load_data(symbol, timeframe):
 
 
 def apply_parameters(strat_class, params):
-    """Create a strategy class with custom parameters applied."""
+    """Create a strategy class with custom parameters from extraction.
+    Maps the universal param names to each strategy class's attributes."""
     if not params:
         return strat_class
 
-    overrides = {}
     p = params if isinstance(params, dict) else json.loads(params)
+    overrides = {}
 
-    # Map extracted parameters to strategy class attributes
-    for key, val in p.items():
-        key_lower = key.lower()
-        if "ema_fast" in key_lower or "fast" in key_lower:
-            if hasattr(strat_class, "ema_fast"):
-                overrides["ema_fast"] = int(val)
-            elif hasattr(strat_class, "fast"):
-                overrides["fast"] = int(val)
-        elif "ema_slow" in key_lower or "slow" in key_lower:
-            if hasattr(strat_class, "ema_slow"):
-                overrides["ema_slow"] = int(val)
-            elif hasattr(strat_class, "slow"):
-                overrides["slow"] = int(val)
-        elif "rsi" in key_lower and "period" in key_lower:
-            if hasattr(strat_class, "rsi_period"):
-                overrides["rsi_period"] = int(val)
-        elif "period" in key_lower:
-            if hasattr(strat_class, "period"):
-                overrides["period"] = int(val)
+    # MA fast period → multiple possible attribute names
+    ma_fast = p.get("ma_fast")
+    if ma_fast:
+        ma_fast = int(ma_fast)
+        for attr in ["ema_fast", "fast"]:
+            if hasattr(strat_class, attr):
+                overrides[attr] = ma_fast
+
+    # MA slow period
+    ma_slow = p.get("ma_slow")
+    if ma_slow:
+        ma_slow = int(ma_slow)
+        for attr in ["ema_slow", "slow"]:
+            if hasattr(strat_class, attr):
+                overrides[attr] = ma_slow
+
+    # RSI period
+    rsi_p = p.get("rsi_period")
+    if rsi_p and hasattr(strat_class, "rsi_period"):
+        overrides["rsi_period"] = int(rsi_p)
+
+    # RSI thresholds
+    rsi_ob = p.get("rsi_overbought")
+    if rsi_ob and hasattr(strat_class, "overbought"):
+        overrides["overbought"] = int(rsi_ob)
+    rsi_os = p.get("rsi_oversold")
+    if rsi_os and hasattr(strat_class, "oversold"):
+        overrides["oversold"] = int(rsi_os)
+
+    # RSI buy/sell thresholds for TrendMomentum
+    if rsi_os and hasattr(strat_class, "rsi_buy"):
+        overrides["rsi_buy"] = int(rsi_os)
+    if rsi_ob and hasattr(strat_class, "rsi_sell"):
+        overrides["rsi_sell"] = int(rsi_ob)
+
+    # Bollinger Bands
+    bb_p = p.get("bb_period")
+    if bb_p and hasattr(strat_class, "period"):
+        overrides["period"] = int(bb_p)
+    bb_std = p.get("bb_std")
+    if bb_std and hasattr(strat_class, "std"):
+        overrides["std"] = float(bb_std)
+
+    # MACD
+    macd_f = p.get("macd_fast")
+    if macd_f and hasattr(strat_class, "fast"):
+        overrides["fast"] = int(macd_f)
+    macd_s = p.get("macd_slow")
+    if macd_s and hasattr(strat_class, "slow"):
+        overrides["slow"] = int(macd_s)
+
+    # ATR
+    atr_p = p.get("atr_period")
+    if atr_p and hasattr(strat_class, "atr_period"):
+        overrides["atr_period"] = int(atr_p)
+    atr_m = p.get("atr_mult")
+    if atr_m and hasattr(strat_class, "atr_mult"):
+        overrides["atr_mult"] = float(atr_m)
+
+    # EMA trend for TrendFollowing
+    if ma_slow and hasattr(strat_class, "ema_period"):
+        overrides["ema_period"] = int(ma_slow)
 
     if not overrides:
         return strat_class
 
-    # Create subclass with overridden defaults
-    new_class = type(
-        f"{strat_class.__name__}_custom",
-        (strat_class,),
-        overrides,
-    )
+    # Create unique subclass with overridden defaults
+    class_name = f"{strat_class.__name__}_{hash(frozenset(overrides.items())) % 99999}"
+    new_class = type(class_name, (strat_class,), overrides)
     return new_class
 
 

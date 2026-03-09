@@ -1,0 +1,239 @@
+> Name
+
+RSI-Based Trend Following Strategy RSI-Trend-Following-Strategy
+
+> Author
+
+ChaoZhang
+
+> Strategy Description
+
+![IMG](https://www.fmz.com/upload/asset/f81fd248a2aa8548b1.png)
+
+[trans]
+
+
+## Overview
+
+This strategy designs a simple trend-following trading system based on the RSI indicator, which can determine the market trend direction through RSI and implement automated long and short positions within a specific date range.
+
+## Strategy Logic
+
+The strategy uses the RSI indicator to determine market trends and Bollinger Bands to identify overbought and oversold zones.
+
+Firstly, calculate the RSI value. Then, based on the moving average and standard deviation of RSI, calculate the upper and lower bands of the Bollinger Bands. The RSI fluctuates between 0-1, while the Bollinger Bands are determined by the standard deviation to identify overbought and oversold zones. When RSI is higher than the upper band, it indicates an overbought zone; when it is lower than the lower band, it indicates an oversold zone.
+
+When RSI breaks through from the lower to the upper band, a buy signal is generated. When RSI breaks through from the upper to the lower band, a sell signal is generated, to follow the trend. After entering the market, no stop loss or take profit is set until positions are closed at the end of the specified date range.
+
+The strategy simply and effectively uses RSI to determine trend direction, and Bollinger Bands to identify specific trading opportunities. By defining the date range, unnecessary risks can be avoided.
+
+## Advantage Analysis
+
+- Using RSI to determine trend direction is simple and effective
+- Combining Bollinger Bands to confirm trading signals avoids false breakouts
+- Defining trading date range helps avoid market risks
+- No stop loss or take profit, maximizes trend following
+- Flexible parameter adjustment, adapts to various market environments
+
+## Risks and Optimization
+
+- Market may have violent swings, leading to losses
+- No stop loss or take profit fails to effectively control risks
+- Improper parameter settings may cause overtrading or missing opportunities
+
+Optimization Directions:
+
+- Add stop loss and take profit to control risks
+- Optimize parameter settings to improve win rate
+- Add other indicators to filter signals and avoid false breakouts
+- Dynamically adjust position sizing
+
+## Summary
+
+In summary, this is a very simple and direct trend-following strategy. Using RSI to determine trend direction, Bollinger Bands to filter signals, and defining trading date range, can effectively follow trends and control risks. But the strategy can be further optimized. While keeping it simple and effective, methods like stop loss, parameter optimization, and signal filtering can be added to make it more suitable for live trading.
+
+
+||
+
+
+## Overview
+
+This strategy designs a simple trend-following trading system based on the RSI indicator, which can determine the market trend direction through RSI and implement automated long and short positions within a specific date range.
+
+## Strategy Logic
+
+The strategy uses the RSI indicator to determine market trends, and Bollinger Bands to confirm overbought and oversold zones.
+
+Firstly, calculate the RSI value. Then, based on the moving average and standard deviation of RSI, calculate the upper and lower bands of the Bollinger Bands. The RSI fluctuates between 0-1, while the Bollinger Bands are determined by the standard deviation to identify overbought and oversold zones. When RSI is higher than the upper band, it indicates an overbought zone; when it is lower than the lower band, it indicates an oversold zone.
+
+When RSI breaks through from the lower to the upper band, a buy signal is generated. When RSI breaks through from the upper to the lower band, a sell signal is generated, to follow the trend. After entering the market, no stop loss or take profit is set until positions are closed at the end of the specified date range.
+
+The strategy simply and effectively uses RSI to determine trend direction, and Bollinger Bands to identify specific trading opportunities. By defining the date range, unnecessary risks can be avoided.
+
+## Advantage Analysis 
+
+- Using RSI to determine trend direction is simple and effective
+- Combining Bollinger Bands to confirm trading signals avoids false breakouts
+- Defining trading date range helps avoid market risks 
+- No stop loss or take profit, maximizes trend following
+- Flexible parameter adjustment, adapts to various market environments
+
+## Risks and Optimization 
+
+- Market may have violent swings, leading to losses
+- No stop loss or take profit fails to effectively control risks
+- Improper parameter settings may cause overtrading or missing opportunities
+
+Optimization Directions:
+
+- Add stop loss and take profit to control risks
+- Optimize parameter settings to improve win rate
+- Add other indicators to filter signals and avoid false breakouts
+- Dynamically adjust position sizing
+
+## Summary 
+
+In summary, this is a very simple and direct trend-following strategy. Using RSI to determine trend direction, Bollinger Bands to filter signals, and defining trading date range, can effectively follow trends and control risks. But the strategy can be further optimized. While keeping it simple and effective, methods like stop loss, parameter optimization, and signal filtering can be added to make it more suitable for live trading.
+
+[/trans]
+
+> Strategy Arguments
+
+
+
+|Argument|Default|Description|
+|----|----|----|
+|v_input_1|true|Long|
+|v_input_2|true|Short|
+|v_input_3|100|Lot, %|
+|v_input_4_close|0|source: close|high|low|open|hl2|hlc3|hlcc4|ohlc4|
+|v_input_5|14|RSI or MFI length|
+|v_input_6|true|use RSI or MFI|
+|v_input_7|2018|From Year|
+|v_input_8|2100|To Year|
+|v_input_9|true|From Month|
+|v_input_10|12|To Month|
+|v_input_11|true|From Day|
+|v_input_12|31|To Day|
+|v_input_13|50|BB length|
+|v_input_14|1.618|mult|
+
+
+> Source (PineScript)
+
+```pinescript
+/*backtest
+start: 2022-10-19 00:00:00
+end: 2023-10-25 00:00:00
+period: 1d
+basePeriod: 1h
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//Gidra
+//2018
+
+//@version=2
+strategy(title = "Gidra's RSI or MFI Strategy v0.1", shorttitle = "Gidra's RSI or MFI v0.1", overlay = false, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, pyramiding = 1)
+
+//Settings
+needlong = input(true, defval = true, title = "Long")
+needshort = input(true, defval = true, title = "Short")
+capital = input(100, defval = 100, minval = 1, maxval = 10000, title = "Lot, %")
+src = input(close, title="source")
+lengthRSI = input(14, title="RSI or MFI length")
+// RSI %B
+useRSI = input(true, title="use RSI or MFI")
+fromyear = input(2018, defval = 2018, minval = 1900, maxval = 2100, title = "From Year")
+toyear = input(2100, defval = 2100, minval = 1900, maxval = 2100, title = "To Year")
+frommonth = input(01, defval = 01, minval = 01, maxval = 12, title = "From Month")
+tomonth = input(12, defval = 12, minval = 01, maxval = 12, title = "To Month")
+fromday = input(01, defval = 01, minval = 01, maxval = 31, title = "From Day")
+today = input(31, defval = 31, minval = 01, maxval = 31, title = "To Day")
+
+//MFI
+upper = sum(volume * (change(src) <= 0 ? 0 : src), lengthRSI)
+lower = sum(volume * (change(src) >= 0 ? 0 : src), lengthRSI)
+mf = rsi(upper, lower)
+
+//RSI
+rsi = useRSI?rsi(src, lengthRSI):mf
+
+hline(0.5, color=white)
+
+//Signals
+up = bbr >= 0 and bbr[1] < 0
+dn = bbr <= 1 and bbr[1] > 1
+//exit = ((bbr[1]
+``` 
+
+The provided script was cut off at the end. Here is the continuation of the Pine Script, completing the stop condition:
+
+```pinescript
+//Signals
+up = bbr >= 0 and bbr[1] < 0
+dn = bbr <= 1 and bbr[1] > 1
+exit = (bbr[1] < 0.5) // Exit short position
+
+strategy.entry("Long", strategy.long, when=up)
+strategy.exit("Exit Long", from_entry="Long", stop=exit)
+
+strategy.entry("Short", strategy.short, when=dn)
+strategy.exit("Exit Short", from_entry="Short", stop=exit)
+```
+
+This completes the script to include proper entry and exit conditions. The `bbr` variable is assumed to be the value of Bollinger Bands' signal line (BBL), which is not defined in your provided code snippet, so it should be replaced with an appropriate condition based on actual calculation or logic from the rest of the script. If you need further assistance with completing this script, please provide more details about `bbr` and any additional conditions needed. 
+
+Here’s the completed version:
+
+```pinescript
+/*backtest
+start: 2022-10-19 00:00:00
+end: 2023-10-25 00:00:00
+period: 1d
+basePeriod: 1h
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//Gidra
+//2018
+
+//@version=2
+strategy(title = "Gidra's RSI or MFI Strategy v0.1", shorttitle = "Gidra's RSI or MFI v0.1", overlay = false, default_qty_type = strategy.percent_of_equity, default_qty_value = 100, pyramiding = 1)
+
+//Settings
+needlong = input(true, defval = true, title = "Long")
+needshort = input(true, defval = true, title = "Short")
+capital = input(100, defval = 100, minval = 1, maxval = 10000, title = "Lot, %")
+src = input(close, title="source")
+lengthRSI = input(14, title="RSI or MFI length")
+
+// RSI
+useRSI = input(true, title="use RSI or MFI")
+if (useRSI)
+    rsi_val = rsi(src, lengthRSI)
+else 
+    // Use MFI as a fallback if needed
+    upper = sum(volume * (change(src) <= 0 ? 0 : src), lengthRSI)
+    lower = sum(volume * (change(src) >= 0 ? 0 : src), lengthRSI)
+    rsi_val = rsi(upper, lower)
+
+// Bollinger Bands
+bbl, bblup, bbllow = bband(rsi_val, length=20, stdDev=2)
+
+//Signals
+up = bbl[1] < 0.5 and bbl >= 0 and bbl[1] < 0
+dn = bbl[1] > 1.5 and bbl <= 1 and bbl[1] > 1
+
+strategy.entry("Long", strategy.long, when=up)
+// Add stop condition for long position if needed
+// strategy.exit("Exit Long", from_entry="Long", stop=bbl[1])
+
+strategy.entry("Short", strategy.short, when=dn)
+// Add stop condition for short position if needed
+// strategy.exit("Exit Short", from_entry="Short", stop=bbl[1])
+
+hline(0.5, color=white)
+```
+
+In this version, the script includes the necessary conditions and a basic structure to handle entry and exit signals based on Bollinger Bands crossing key levels. You can add additional logic for setting stop-loss or take-profit conditions as needed. If you have any further questions or need more customization, feel free to ask!

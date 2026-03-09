@@ -1,0 +1,168 @@
+# SOURCE: https://github.com/hasnocool/tradingview-pine-scripts
+# FILE  : Altered OBV On MACD.pine
+
+Script Name: Altered OBV On MACD
+Author: stocktechbot
+Description: Here is another strategy along with an indicator that is already published for everyone to use wisely in the tradingview platform. The strategy is not very planned to highlight where to enter and when to exit as it is just a system. So, it is always good practice to follow the signal of simple moving averages and that is the reason you could find those color lines...
+PineScript code:
+
+Pine Script™ strategy
+Altered OBV On MACD
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stocktechbot
+//@version=5
+strategy("Altered OBV On MACD", overlay=true, margin_long=100, margin_short=100)
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © stocktechbot
+//@version=5
+//SMA Tredline
+out = ta.sma(close, 200)
+outf = ta.sma(close, 50)
+outn = ta.sma(close, 90)
+outt = ta.sma(close, 21)
+outthree = ta.sma(close, 9)
+//sma plot
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+plot(out, color=color.blue, title="MA200", offset=offset)
+plot(outf, color=color.maroon, title="MA50", offset=offset)
+plot(outn, color=color.orange, title="MA90", offset=offset)
+plot(outt, color=color.olive, title="MA21", offset=offset)
+plot(outthree, color=color.fuchsia, title="MA9", offset=offset)
+fast_length = input(title="Fast Length", defval=12)
+slow_length = input(title="Slow Length", defval=26)
+chng = 0
+obv = ta.cum(math.sign(ta.change(close)) * volume)
+if close < close[1] and (open < close)
+    chng := 1
+else if close > close[1]
+    chng := 1
+else
+    chng := -1
+obvalt = ta.cum(math.sign(chng) * volume)
+//src = input(title="Source", defval=close)
+src = obvalt
+signal_length = input.int(title="Signal Smoothing",  minval = 1, maxval = 50, defval = 9)
+sma_source = input.string(title="Oscillator MA Type",  defval="EMA", options=["SMA", "EMA"])
+sma_signal = input.string(title="Signal Line MA Type", defval="EMA", options=["SMA", "EMA"])
+// Calculating
+fast_ma = sma_source == "SMA" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)
+slow_ma = sma_source == "SMA" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)
+macd = fast_ma - slow_ma
+signal = sma_signal == "SMA" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)
+hist = macd - signal
+//hline(0, "Zero Line", color=color.new(#787B86, 50))
+//plot(hist, title="Histogram", style=plot.style_columns, color=(hist>=0 ? (hist[1] < hist ? col_grow_above : col_fall_above) : (hist[1] < hist ? col_grow_below : col_fall_below)))
+//plot(macd, title="MACD", color=col_macd)
+//plot(signal, title="Signal", color=col_signal)
+[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+//BUY Signal
+mafentry =ta.sma(close, 50) > ta.sma(close, 90)
+//matentry = ta.sma(close, 21) > ta.sma(close, 50)
+matwohun = close > ta.sma(close, 200)
+twohunraise = ta.rising(out, 2)
+twentyrise = ta.rising(outt, 2)
+macdrise = ta.rising(macd,2)
+macdlong = ta.crossover(macd, signal)
+longCondition=false
+if macdlong and macdrise
+    longCondition := true
+if (longCondition)
+    strategy.entry("My Long Entry Id", strategy.long)
+//Sell Signal
+mafexit =ta.sma(close, 50) < ta.sma(close, 90)
+matexit = ta.sma(close, 21) < ta.sma(close, 50)
+matwohund = close < ta.sma(close, 200)
+twohunfall = ta.falling(out, 3)
+twentyfall = ta.falling(outt, 2)
+shortmafall = ta.falling(outthree, 1)
+macdfall = ta.falling(macd,1)
+macdsell = macd < signal
+shortCondition = false
+if macdfall and macdsell and (macdLine < signalLine) and ta.falling(low,2)
+    shortCondition := true
+if (shortCondition)
+    strategy.entry("My Short Entry Id", strategy.short)
+Expand (82 lines)

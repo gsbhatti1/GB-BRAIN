@@ -204,6 +204,33 @@ def download_and_save(item, owner, repo, stars, conn, dry_run=False):
 
 def run_harvest(categories=None, dry_run=False, max_pages=2):
     """Main harvest loop."""
+    # Check GitHub token
+    if not GITHUB_TOKEN or GITHUB_TOKEN in ("test", "ghp_your_token_here", "your_token_here"):
+        print("=" * 60)
+        print("[ERROR] GitHub token not configured!")
+        print("")
+        print("  1. Go to: https://github.com/settings/tokens")
+        print("  2. Generate a new token (classic) with 'public_repo' scope")
+        print("  3. Open your .env file: notepad .env")
+        print("  4. Set: GITHUB_TOKEN=ghp_your_actual_token")
+        print("  5. Save and re-run this script")
+        print("")
+        print("  Without a token, GitHub API returns 0 results.")
+        print("=" * 60)
+        return
+
+    # Verify token works
+    try:
+        test_r = requests.get("https://api.github.com/user", headers=HEADERS, timeout=10)
+        if test_r.status_code == 401:
+            print("[ERROR] GitHub token is INVALID. Generate a new one at:")
+            print("  https://github.com/settings/tokens")
+            return
+        remaining = test_r.headers.get("X-RateLimit-Remaining", "?")
+        print(f"[OK] GitHub token valid. Rate limit remaining: {remaining}")
+    except Exception as e:
+        print(f"[WARN] Could not verify GitHub token: {e}")
+
     # Load queries
     queries_file = Path(__file__).parent / "queries.json"
     all_queries = json.loads(queries_file.read_text(encoding="utf-8"))

@@ -1,0 +1,124 @@
+# SOURCE: https://github.com/hasnocool/tradingview-pine-scripts
+# FILE  : --[Guz] Vortex Indicator Custom.pine
+
+Script Name: --[Guz] Vortex Indicator Custom
+Author: guz12
+Description: //   Custom Vortex Strategy (backtester)
+// Custom version of the Vortex indicators that adds many features:
+// -Triggers trades after a threshold is reached instead of the normal vortex lines cross (once the difference between the 2 lines is important enough)
+// -Smooths the Vortex lines with an EMA
+// -Adds Take Profit and Stop Loss selection
+// -Adds the...
+PineScript code:
+
+Pine Script™ strategy
+%-[Guz] Vortex Indicator Custom
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+// [Guz] Custom Vortex
+// Custom version of the Vortex indicators that adds many features:
+// -Triggers trades after a threshold is reached instead of the normal vortex lines cross (once the difference between the 2 lines is important enough)
+// -Smooths the Vortex lines with an EMA
+// -Adds Take Profit and Stop Loss selection
+// -Adds the possibility to go Long only, Short only or both of them
+// ! notice that it uses 10% position size and 0.04% trade fee, found on some crypto exchanges futures contracts
+// Allows testing leverage with position size moddification (values above 100%, to be done with caution)
+// Not an investment advice 
+//@version=4
+strategy(title="%-[Guz] Vortex Indicator Custom - V2", shorttitle="%-[Guz] Vortex Indicator Custom - V2", overlay=false, calc_on_order_fills = false, calc_on_every_tick = false, commission_type=strategy.commission.percent, commission_value=0.04, default_qty_type = strategy.percent_of_equity, default_qty_value = 10, initial_capital = 10000, margin_long=1, margin_short=1)
+period_ = input(300, title="Length", minval=2)
+VMP = sum( abs( high - low[1]), period_ )
+VMM = sum( abs( low - high[1]), period_ )
+STR = sum( atr(1), period_ )
+ema_len = input(title="EMA Length", defval=7)
+tresh= input(title="Threshold", defval=16.2, step=0.1)
+VIP = ema(VMP / STR,ema_len)
+VIM = ema(VMM / STR,ema_len)
+plot(VIP, title="VI +", color=#2962FF)
+plot(VIM, title="VI -", color=#E91E63)
+plot(1+tresh/2/100, title="Threshold", color=color.green)
+condition_long = crossover(VIP-VIM, tresh/100)
+condition_close = cross(VIP-VIM,0)
+condition_short = crossunder(VIP-VIM, -tresh/100)
+is_short=input(true,title="Do Short?")
+is_long=input(true,title="Do Long?")
+if (condition_long and is_long)
+    strategy.entry("VortexLE", strategy.long, comment="Long Algo")
+if (condition_short and is_short)
+    strategy.entry("VortexSE", strategy.short, comment="Short Algo")
+if (condition_close)
+    strategy.close_all()
+//plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+stop_loss_long_percent = input(2.5, title="Stop Loss Long", minval=0.1, step=0.1)
+stop_loss_long = (1-stop_loss_long_percent/100)*strategy.position_avg_price
+take_profit_long_percent = input(1.5, title="Take Profit Long", minval=0.1, step=0.1)
+take_profit_long = (1+take_profit_long_percent/100)*strategy.position_avg_price
+stop_loss_short_percent = input(2.5,title="Stop Loss Short", minval=0.1, step=0.1) 
+stop_loss_short = (1+stop_loss_short_percent/100)*strategy.position_avg_price
+take_profit_short_percent = input(1.7,title="Take Profit Short", minval=0.1, step=0.1)
+take_profit_short = (1-take_profit_short_percent/100)*strategy.position_avg_price
+strategy.exit("TP-SL Long", "VortexLE",  limit = take_profit_long , stop = stop_loss_long) //, trail_price = trail_price_long , trail_offset = trail_offset_long) //, trail_offset=tsl_offset_tick, trail_price=tsl_offset_tick) 
+strategy.exit("TP-SL Short", "VortexSE",  limit = take_profit_short , stop = stop_loss_short)  
+ 
+Expand (62 lines)

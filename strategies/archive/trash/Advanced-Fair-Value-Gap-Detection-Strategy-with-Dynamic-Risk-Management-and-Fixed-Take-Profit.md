@@ -1,0 +1,71 @@
+```pinescript
+/*backtest
+start: 2019-12-23 08:00:00
+end: 2024-11-28 00:00:00
+period: 1d
+basePeriod: 1d
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//@version=5
+strategy("Fair Value Gap Strategy with % SL and Fixed TP", overlay=true, initial_capital=500, default_qty_type=strategy.fixed, default_qty_value=1)
+
+// Parameters
+fvgThreshold = input.float(0.5, "FVG Threshold (%)", minval=0.1, step=0.1)
+
+// Fixed take profit in pips
+takeProfitPips = 50
+
+// Function to convert pips to price
+pipsToPriceChange(pips) =>
+    syminfo.mintick * pips * 10
+
+// Function to detect Fair Value Gap
+detectFVG(dir) =>
+    gap = 0.0
+    if dir > 0  // Bullish FVG
+        gap := low[2] - high[1]
+    else  // Bearish FVG
+        gap := low[1] - high[2]
+    math.abs(gap) > (close * fvgThreshold / 100)
+
+// Detect FVGs
+bullishFVG = detectFVG(1)
+bearishFVG = detectFVG(-1)
+
+// Entry conditions
+longCondition = bullishFVG
+shortCondition = bearishFVG
+
+// Calculate take profit level
+longTakeProfit = strategy.position_avg_price + pipsToPriceChange(takeProfitPips)
+shortTakeProfit = strategy.position_avg_price - pipsToPriceChange(takeProfitPips)
+
+// Calculate stop loss amount (5% of capital)
+stopLossAmount = strategy.equity * 0.01
+
+// Execute trades
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+// Set exit conditions
+if (strategy.position_size > 0)
+    strategy.exit("Long TP", "Long", limit=longTakeProfit)
+    strategy.close("Long SL", when=strategy.openprofit < -stopLossAmount)
+else if (strategy.position_size < 0)
+    strategy.exit("Short TP", "Short", limit=shortTakeProfit)
+    strategy.close("Short SL", when=strategy.openprofit < -stopLossAmount)
+
+// Plot signals
+plotshape(longCondition, "Buy Signal", location = location.belowbar, color = color.green, style = shape.triangleup, size = size.small)
+plotshape(shortCondition, "Sell Signal", location = location.abovebar, color = color.red, style = shape.triangledown, size = size.small)
+```
+
+> Disclaimer
+This strategy is for educational purposes only and should be thoroughly backtested and optimized before live trading. Please ensure you understand the risks involved and consider using a demo account to test the strategy in a simulated environment.
+
+#### Disclaimer
+This strategy is provided for educational purposes only and must be thoroughly backtested and optimized before live trading. Traders are advised to fully understand the associated risks and to use a demo account to test the strategy in a simulated environment.[/trans]

@@ -1,0 +1,40 @@
+```pinescript
+/*backtest
+start: 2023-01-08 00:00:00
+end: 2024-01-14 00:00:00
+period: 1d
+basePeriod: 1h
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+//@version=4
+strategy("Trading Trend Following", overlay=true)
+
+// Define EMA parameters
+emaLengthShort = input(50, title="Short EaMA Length")
+emaLengthLong = input(200, title="Long EMA Length")
+ema50 = ema(close, emaLengthShort)
+ema200 = ema(close, emaLengthLong)
+
+// Calculate RSI
+rsiLength = input(14, title="RSI Length")
+rsiValue = rsi(close, rsiLength)
+
+// Define Demand and Supply zones
+demandZone = input(true, title="Demand Zone")
+supplyZone = input(true, title="Supply Zone")
+
+// Define Buy and Sell conditions
+buyCondition = crossover(ema50, ema200) and close > ema50 and rsiValue > 55
+sellCondition = crossunder(ema50, ema200) and close < ema50 and rsiValue < 45
+
+// Entry point buy when the price is closed above Demand and EMA gives a buy signal
+buyEntryCondition = close > ema50 and demandZone
+strategy.entry("Buy", strategy.long, when=buyCondition and buyEntryCondition)
+
+// Entry point sell when the price is closed below Supply and EMA gives a sell signal
+sellEntryCondition = close < ema50 and supplyZone
+strategy.entry("Sell", strategy.short, when=sellCondition and sellEntryCondition)
+```
+
+This Pine Script defines the trading strategy with the specified parameters and conditions for entering buy and sell trades. The `buyCondition` is triggered when both the fast EMA crosses above the slow EMA, the price closes above the short-term EMA, and RSI is above 55. The `sellCondition` triggers a short position when the opposite occurs with the RSI below 45. Additionally, entry points are further filtered by demand and supply zones to ensure more precise trades.

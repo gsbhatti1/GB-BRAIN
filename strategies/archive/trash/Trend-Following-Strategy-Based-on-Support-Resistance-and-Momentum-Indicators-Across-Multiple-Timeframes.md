@@ -1,0 +1,5 @@
+vement filtering, allowing it to effectively profit from trending markets while controlling drawdown risks. Its advantages lie in clear and concise signals with a logical structure, making it suitable for use over medium-to-long-term periods. However, the strategy also faces challenges such as frequent trading, difficulties in parameter optimization, and insufficient risk control under extreme market conditions.
+
+Future improvements could involve integrating more technical indicators, optimizing parameters, setting hard stop losses, and judging abnormal market conditions. In conclusion, this is a relatively mature trend-following strategy that, after appropriate refinement and enhancement, can become a robust trading system. The strategy's conceptual framework serves as valuable insight but requires careful consideration of actual trading experience and market characteristics before application.
+
+Quantitative trading demands both mathematical logic and subjective judgment; only by combining these two aspects can ideal returns be achieved.

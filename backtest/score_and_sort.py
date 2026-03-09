@@ -118,29 +118,53 @@ def run_scoring(generate_report=False):
 
     conn.commit()
 
-    # Move files
-    gems = best_per_strat[best_per_strat["status"] == "GEM"]
-    trash = best_per_strat[best_per_strat["status"] == "TRASH"]
+    # ── Ticker name mapping for folder names ────
+    TICKER_FOLDERS = {
+        "BTCUSDT": "btc",
+        "ETHUSDT": "eth",
+        "SOLUSDT": "sol",
+        "^NDX":    "nas100",
+        "^DJI":    "us30",
+        "^GSPC":   "spx",
+        "NDX":     "nas100",
+        "DJI":     "us30",
+        "GSPC":    "spx",
+    }
+
+    # Move GEM files into ticker-specific folders
+    # For each GEM backtest result, copy the strategy file to best/<ticker>/
+    gem_results = df[df["status"] == "GEM"]
+    trash_results = best_per_strat[best_per_strat["status"] == "TRASH"]
 
     gem_count = 0
     trash_count = 0
+    ticker_counts = {}
 
-    for _, row in gems.iterrows():
+    for _, row in gem_results.iterrows():
         strat = conn.execute(
-            "SELECT source_file, category FROM strategies WHERE id = ?",
+            "SELECT source_file FROM strategies WHERE id = ?",
             (row["strategy_id"],),
         ).fetchone()
-        if strat and strat["source_file"]:
-            src = Path(strat["source_file"])
-            if src.exists():
-                cat = strat["category"] or "crypto"
-                dest_dir = BEST_DIR / cat
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                dest = dest_dir / src.name
-                shutil.copy2(src, dest)
-                gem_count += 1
+        if not strat or not strat["source_file"]:
+            continue
+        src = Path(strat["source_file"])
+        if not src.exists():
+            continue
 
-    for _, row in trash.iterrows():
+        # Determine ticker folder
+        symbol = row["symbol"]
+        ticker_folder = TICKER_FOLDERS.get(symbol, symbol.lower().replace("^", ""))
+        dest_dir = BEST_DIR / ticker_folder
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        dest = dest_dir / src.name
+        if not dest.exists():
+            shutil.copy2(src, dest)
+            gem_count += 1
+
+        ticker_counts[ticker_folder] = ticker_counts.get(ticker_folder, 0) + 1
+
+    for _, row in trash_results.iterrows():
         strat = conn.execute(
             "SELECT source_file FROM strategies WHERE id = ?",
             (row["strategy_id"],),
@@ -149,7 +173,8 @@ def run_scoring(generate_report=False):
             src = Path(strat["source_file"])
             if src.exists():
                 dest = ARCHIVE_DIR / src.name
-                shutil.copy2(src, dest)
+                if not dest.exists():
+                    shutil.copy2(src, dest)
                 trash_count += 1
 
     conn.close()
@@ -164,6 +189,10 @@ def run_scoring(generate_report=False):
     print(f"  TRASH: {status_counts.get('TRASH', 0):,}")
     print(f"  Files moved to best/:    {gem_count}")
     print(f"  Files moved to archive/: {trash_count}")
+    if ticker_counts:
+        print(f"\n  GEMs by ticker:")
+        for ticker, count in sorted(ticker_counts.items(), key=lambda x: -x[1]):
+            print(f"    strategies/best/{ticker}/  → {count} GEMs")
     print(f"{'=' * 60}")
 
     # Generate Excel report
@@ -175,48 +204,64 @@ def run_scoring(generate_report=False):
 
 
 def generate_excel_report(df):
-    """Generate a color-coded Excel ranking report."""
+    """Generate a color-coded Excel ranking report with per-ticker sheets."""
     report_dir = ROOT / "monitor" / "reports"
     report_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = report_dir / f"strategy_rankings_{ts}.xlsx"
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Rankings"
+    TICKER_NAMES = {
+        "BTCUSDT": "BTC", "ETHUSDT": "ETH", "SOLUSDT": "SOL",
+        "^NDX": "NAS100", "^DJI": "US30", "^GSPC": "SPX",
+        "NDX": "NAS100", "DJI": "US30", "GSPC": "SPX",
+    }
 
     cols = [
-        "strategy_name", "category", "symbol", "timeframe",
+        "strategy_name", "symbol", "timeframe",
         "total_trades", "win_rate", "total_return", "max_drawdown",
         "profit_factor", "sharpe_ratio", "composite_score", "status",
     ]
 
-    # Header
-    header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True, size=10)
-    for ci, col in enumerate(cols, 1):
-        cell = ws.cell(row=1, column=ci, value=col.replace("_", " ").title())
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center")
-
-    # Data rows
     gem_fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
     pass_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
     trash_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+    header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=10)
 
-    for ri, (_, row) in enumerate(df.head(500).iterrows(), 2):
-        status = row.get("status", "PASS")
-        fill = gem_fill if status == "GEM" else trash_fill if status == "TRASH" else pass_fill
+    wb = Workbook()
 
+    def write_sheet(ws, data, title):
+        ws.title = title
         for ci, col in enumerate(cols, 1):
-            val = row.get(col, "")
-            cell = ws.cell(row=ri, column=ci, value=val)
-            cell.fill = fill
+            cell = ws.cell(row=1, column=ci, value=col.replace("_", " ").title())
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        for ri, (_, row) in enumerate(data.head(500).iterrows(), 2):
+            status = row.get("status", "PASS")
+            fill = gem_fill if status == "GEM" else trash_fill if status == "TRASH" else pass_fill
+            for ci, col in enumerate(cols, 1):
+                val = row.get(col, "")
+                cell = ws.cell(row=ri, column=ci, value=val)
+                cell.fill = fill
+        for ci in range(1, len(cols) + 1):
+            ws.column_dimensions[chr(64 + min(ci, 26))].width = 18
 
-    # Auto-width
-    for ci in range(1, len(cols) + 1):
-        ws.column_dimensions[chr(64 + min(ci, 26))].width = 18
+    # Sheet 1: All results (top 500)
+    write_sheet(wb.active, df, "All Rankings")
+
+    # Sheet 2: GEMs only
+    gems_df = df[df["status"] == "GEM"]
+    if not gems_df.empty:
+        write_sheet(wb.create_sheet(), gems_df, "ALL GEMS")
+
+    # Per-ticker sheets (GEMs only)
+    for symbol in df["symbol"].unique():
+        ticker_gems = df[(df["symbol"] == symbol) & (df["status"] == "GEM")]
+        if ticker_gems.empty:
+            continue
+        sheet_name = TICKER_NAMES.get(symbol, symbol.replace("^", ""))
+        write_sheet(wb.create_sheet(), ticker_gems, sheet_name)
 
     wb.save(path)
     return path

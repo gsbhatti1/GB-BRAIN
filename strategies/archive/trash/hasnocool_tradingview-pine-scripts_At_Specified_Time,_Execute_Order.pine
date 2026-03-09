@@ -1,0 +1,75 @@
+# SOURCE: https://github.com/hasnocool/tradingview-pine-scripts
+# FILE  : At Specified Time, Execute Order.pine
+
+Script Name: At Specified Time, Execute Order
+Author: ytrevor
+Description: Sell current holdings at a specified time, then place a buy limit order at 1% the selling price.
+PineScript code:
+
+Pine Script™ strategy
+At Specified Time, Execute Order
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © ytrevor
+//@version=4
+strategy("Order At Specified Time", overlay=true)
+// -- These inputs are for customizing the times of your desired orders -- //
+customHour = input(title="Hour for Order Execution", type=input.integer, defval=01, minval=00, maxval=24) //
+customMinute = input(title="Minute for Order Execution", type=input.integer, defval=00, minval=00, maxval=59)
+targetTime = timestamp("UTC", year, month, dayofmonth, customHour, customMinute, 00) //Order executes at this time
+inDateRange = (time >= targetTime) and (time <= targetTime) //Orders are placed everyday at 01:00 UTC, or any other time specified via input
+// -- These inputs are for back testing. Feel free to change the start and end dates via input -- // 
+startDay = input(title="Start Day", type=input.integer, defval=10, minval=1, maxval=31) 
+startMonth = input(title="Start Month", type=input.integer, defval=2, minval=1, maxval=12)
+startYear = input(title="Start Year", type=input.integer, defval=2021)
+endDay = input(title="End Day", type=input.integer, defval=22, minval=1, maxval=31)
+endMonth = input(title="End Month", type=input.integer, defval=3, minval=1, maxval=12)
+endYear = input(title="End Year", type=input.integer, defval=2021)
+betweenDates = (time >= timestamp(startYear, startMonth, startDay, 1, 0)) and (time < timestamp(endYear, endMonth, endDay, 1, 0))
+// -- Order execution --  //
+if betweenDates
+    buyPrice = close*0.99 //Buy at 1% lower than selling price
+    strategy.entry("Sell", strategy.short, when=inDateRange) //Sell at 01:00 UTC, or at any other time specified via input
+    strategy.entry("Buy", strategy.long, limit=buyPrice, when=inDateRange) //Buy limit order placed at the same time, 1% lower than selling price
+Expand (41 lines)

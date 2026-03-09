@@ -1,0 +1,143 @@
+// @version=6
+strategy("GB ORB Strategy v1 - Opening Range Breakout", overlay=true, initial_capital=100000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, currency=currency.USD, max_bars_back=500, commission_type=strategy.commission.percent, commission_value=0.01)
+
+// ================================================================
+// GB ORB STRATEGY v1
+// Based on: TradeXLabs - Fully Automated ORB Strategy
+// Logic: Opening Range Breakout with ATR + Volume filters
+// Optimized for: NAS100 (5m)
+// Results target: 75%+ win rate, 200% P&L over 3 years
+// ================================================================
+
+// ---- INPUTS ----
+orb_start_hour   = input.int(9,  "ORB Start Hour",   group="ORB Window")
+orb_start_min    = input.int(30, "ORB Start Min",    group="ORB Window")
+orb_end_hour     = input.int(9,  "ORB End Hour",     group="ORB Window")
+orb_end_min      = input.int(50, "ORB End Min",      group="ORB Window")
+trade_end_hour   = input.int(15, "Stop Trading Hour",group="ORB Window")
+trade_end_min    = input.int(30, "Stop Trading Min", group="ORB Window")
+
+atr_len          = input.int(14,   "ATR Length",     group="Filters")
+atr_min_mult     = input.float(0.5, "Min ATR Mult",  group="Filters")
+vol_ma_len       = input.int(20,   "Volume MA Len",  group="Filters")
+vol_mult         = input.float(1.0, "Vol Multiplier",group="Filters")
+
+rr_ratio         = input.float(2.0, "Reward:Risk",   group="Risk")
+sl_buffer        = input.float(0.5, "SL Buffer ATR", group="Risk")
+
+// ---- TIME ----
+is_orb_window  = (hour == orb_start_hour and minute >= orb_start_min) or (hour == orb_end_hour and minute < orb_end_min and not (orb_start_hour == orb_end_hour))
+is_orb_time    = (hour * 60 + minute) >= (orb_start_hour * 60 + orb_start_min) and (hour * 60 + minute) < (orb_end_hour * 60 + orb_end_min)
+is_trade_time  = (hour * 60 + minute) >= (orb_end_hour * 60 + orb_end_min) and (hour * 60 + minute) < (trade_end_hour * 60 + trade_end_min)
+
+// ---- OPENING RANGE ----
+var float orb_high = na
+var float orb_low  = na
+var bool  orb_set  = false
+var bool  orb_done = false
+
+// Reset daily
+is_new_day = ta.change(dayofweek) != 0 or (hour == orb_start_hour and minute == orb_start_min and second < 5)
+if is_new_day
+    orb_high := na
+    orb_low  := na
+    orb_set  := false
+    orb_done := false
+
+// Build ORB during window
+if is_orb_time
+    orb_high := na(orb_high) ? high : math.max(orb_high, high)
+    orb_low  := na(orb_low)  ? low  : math.min(orb_low,  low)
+    orb_set  := true
+
+// Lock ORB once window closes
+if orb_set and not is_orb_time and not orb_done
+    orb_done := true
+
+// ---- ATR + VOLUME FILTERS ----
+atr_val = ta.atr(atr_len)
+vol_ma  = ta.sma(volume, vol_ma_len)
+orb_range = na(orb_high) or na(orb_low) ? na : orb_high - orb_low
+
+atr_ok  = not na(orb_range) and orb_range >= atr_val * atr_min_mult
+vol_ok  = volume >= vol_ma * vol_mult
+
+// ---- BREAKOUT SIGNALS ----
+long_signal  = orb_done and is_trade_time and close > orb_high and close[1] <= orb_high and atr_ok and vol_ok and strategy.position_size == 0
+short_signal = orb_done and is_trade_time and close < orb_low  and close[1] >= orb_low  and atr_ok and vol_ok and strategy.position_size == 0
+
+// ---- EXECUTION ----
+var float sl = na
+var float tp = na
+
+if long_signal
+    sl := orb_low - (atr_val * sl_buffer)
+    risk = close - sl
+    tp := close + (risk * rr_ratio)
+    if risk > 0 and tp > close
+        strategy.entry("ORB Long", strategy.long)
+        strategy.exit("Exit L", "ORB Long", stop=sl, limit=tp, comment_loss="SL", comment_profit="TP")
+
+if short_signal
+    sl := orb_high + (atr_val * sl_buffer)
+    risk = sl - close
+    tp := close - (risk * rr_ratio)
+    if risk > 0 and tp < close
+        strategy.entry("ORB Short", strategy.short)
+        strategy.exit("Exit S", "ORB Short", stop=sl, limit=tp, comment_loss="SL", comment_profit="TP")
+
+if strategy.position_size == 0
+    sl := na
+    tp := na
+
+// ---- MANUAL WIN RATE ----
+var int total_trades = 0
+var int win_trades   = 0
+var float win_rate   = 0.0
+
+trade_closed = strategy.closedtrades > strategy.closedtrades[1]
+if trade_closed
+    total_trades := strategy.closedtrades
+    if strategy.closedtrades.profit(strategy.closedtrades - 1) > 0
+        win_trades += 1
+    win_rate := total_trades > 0 ? (win_trades / total_trades) * 100 : 0.0
+
+// ---- VISUALS ----
+// ORB High/Low lines
+plot(orb_done ? orb_high : na, "ORB High", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+plot(orb_done ? orb_low  : na, "ORB Low",  color=color.new(color.red,   0), linewidth=2, style=plot.style_linebr)
+
+// ORB zone shading
+orb_high_plot = plot(orb_set ? orb_high : na, display=display.none)
+orb_low_plot  = plot(orb_set ? orb_low  : na, display=display.none)
+fill(orb_high_plot, orb_low_plot, color=color.new(color.yellow, 88), title="ORB Zone")
+
+// Gold candle highlight on breakout
+barcolor(long_signal  ? color.new(color.yellow, 0) : na)
+barcolor(short_signal ? color.new(color.orange, 0) : na)
+
+// Entry signals
+plotshape(long_signal,  "ORB Long",  style=shape.labelup,   location=location.belowbar, color=color.green, text="ORB L", textcolor=color.white, size=size.small)
+plotshape(short_signal, "ORB Short", style=shape.labeldown, location=location.abovebar, color=color.red,   text="ORB S", textcolor=color.white, size=size.small)
+
+// SL/TP lines
+plot(sl, "SL", color=color.red,   style=plot.style_linebr, linewidth=1)
+plot(tp, "TP", color=color.green, style=plot.style_linebr, linewidth=1)
+
+// ---- DASHBOARD ----
+var table d = table.new(position.top_right, 2, 7, bgcolor=color.black, border_color=color.gray, border_width=1)
+if barstate.islast
+    table.cell(d, 0, 0, "GB ORB v1",     text_color=color.yellow, text_size=size.small)
+    table.cell(d, 1, 0, "ACTIVE",         text_color=color.lime,   text_size=size.small)
+    table.cell(d, 0, 1, "ORB High",       text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 1, na(orb_high) ? "--" : str.tostring(math.round(orb_high, 1)), text_color=color.green, text_size=size.small)
+    table.cell(d, 0, 2, "ORB Low",        text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 2, na(orb_low) ? "--" : str.tostring(math.round(orb_low, 1)),  text_color=color.red,   text_size=size.small)
+    table.cell(d, 0, 3, "Win Rate",        text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 3, str.tostring(math.round(win_rate, 1)) + "%", text_color=color.white, text_size=size.small)
+    table.cell(d, 0, 4, "Total Trades",    text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 4, str.tostring(strategy.closedtrades), text_color=color.white, text_size=size.small)
+    table.cell(d, 0, 5, "Net Profit",      text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 5, str.tostring(math.round(strategy.netprofit, 2)), text_color=strategy.netprofit >= 0 ? color.green : color.red, text_size=size.small)
+    table.cell(d, 0, 6, "Open P&L",        text_color=color.white,  text_size=size.small)
+    table.cell(d, 1, 6, str.tostring(math.round(strategy.openprofit, 2)), text_color=strategy.openprofit >= 0 ? color.green : color.red, text_size=size.small)

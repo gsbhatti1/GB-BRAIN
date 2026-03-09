@@ -1,0 +1,556 @@
+# SOURCE: https://github.com/hasnocool/tradingview-pine-scripts
+# FILE  : EMR Strategy [H1 Backtesting].pine
+
+Script Name: EMR Strategy [H1 Backtesting]
+Author: inno14
+Description: EMR Strategy base on EMA, MACD and RSI to supply signal on time frame H1. 
+Details of Rule as below: 
+===
+1.EMA 
++ Time frame: H1 
++ Periods: 25, 100 (~ EMA 25 H4), 600 (~ EMA 25 D1) 
+===
+2.MACD 
++ Time frame: H1 
++ Periods: 12,26,9 
+===
+3.RSI 
++ Time frame: H1 
++ Periods: 14 
+===
+4.Trading Rule 
+4.1.Long Position 
++ MACD>0 and RSI>50 and close price moving above...
+PineScript code:
+
+Pine Script™ strategy
+EMR Strategy [H1 Backtesting]
+Copy code
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+//@version=4
+//╔════════════════════════════════════════════════════════════════════════════╗
+//║EMR Strategy base on EMA, MACD and RSI to supply signal on time frame H1.   ║
+//║Details of Rule as below:                                                   ║
+//║============================================================================║
+//║1.EMA                                                                       ║
+//║+ Time frame: H1                                                            ║
+//║+ Periods: 25, 100 (~ EMA 25 H4), 600 (~ EMA 25 D1)                         ║
+//║============================================================================║
+//║2.MACD                                                                      ║
+//║+ Time frame: H1                                                            ║
+//║+ Periods: 12,26,9                                                          ║
+//║============================================================================║
+//║3.RSI                                                                       ║
+//║+ Time frame: H1                                                            ║
+//║+ Periods: 14                                                               ║
+//║============================================================================║
+//║4.Trading Rule                                                              ║
+//║4.1.Long Position                                                           ║
+//║+ MACD>0 and RSI>50 and close price moving above EMA 25                     ║
+//║+ Close price crossed EMA 100 or crossed EMA 600 at the first time          ║
+//║4.2.Short Position                                                          ║
+//║+ MACD<0 and RSI<50 and close price moving below EMA 25                     ║
+//║+ Close price crossed EMA 100 or crossed EMA 600 at the first time          ║
+//║4.3.Exit Position                                                           ║
+//║+ Exit Long Position when High Price moving below all 3 EMA                 ║
+//║+ Exit Long Position when RSI overbought and EMA25>EMA100 or EMA25>EMA600   ║
+//║+ Exit Short Position when Low Price moving above all 3 EMA                 ║
+//║+ Exit Short Position when RSI oversold and EMA25<EMA100 or EMA25<EMA600    ║
+//║============================================================================║
+//║5.Money Management                                                          ║
+//║+ This strategy concentrate into winrate                                    ║
+//║+ So use trailing stop to protect your profits.                             ║
+//║+ And use stoploss to avoid big loss on trades.                             ║
+//╚════════════════════════════════════════════════════════════════════════════╝
+strategy("EMR Strategy [H1 Backtesting]",overlay=true,max_lines_count=500,max_labels_count=500)
+//======================================
+//EMA
+//======================================
+ema_tt="=== EMA ==="
+ema1_len=input(25,title="EMA",inline="set",group=ema_tt)
+ema2_len=input(100,title="EMA",inline="set",group=ema_tt)
+ema3_len=input(600,title="EMA",inline="set",group=ema_tt)
+_ema()=>
+    _close=close
+    _ema1=ema(_close,ema1_len)
+    _ema2=ema(_close,ema2_len)
+    _ema3=ema(_close,ema3_len)
+    _ema1_dir_val=cross(_close,_ema1)?0:_close[0]>_ema1[0]?1:_close[0]<_ema1[0]?-1:na
+    _ema2_dir_val=cross(_close,_ema2)?0:_close[0]>_ema2[0]?1:_close[0]<_ema2[0]?-1:na
+    _ema3_dir_val=cross(_close,_ema3)?0:_close[0]>_ema3[0]?1:_close[0]<_ema3[0]?-1:na
+    [_ema1,_ema2,_ema3,_ema1_dir_val,_ema2_dir_val,_ema3_dir_val,_close]
+//======================================
+//MACD
+//======================================
+macd_tt="=== MACD ==="
+macd_source=close
+macd_fast=input(12,title="Fast", inline="set", group=macd_tt)
+macd_slow=input(26,title="Slow", inline="set", group=macd_tt)
+macd_sig=input(9,title="Signal", inline="set", group=macd_tt)
+_macd()=>
+    [macd,_,_]=macd(macd_source,macd_fast,macd_slow,macd_sig)
+//======================================
+//RSI
+//======================================
+rsi_tt="=== RSI ==="
+rsi_source=close
+rsi_len=input(14,title="Period", inline="set", group=rsi_tt)
+rsi_ovb=input(60,title="Overbought", inline="set", group=rsi_tt)
+rsi_ovs=input(40,title="Oversold", inline="set", group=rsi_tt)
+_rsi()=>
+    rsi=rsi(rsi_source,rsi_len)
+//======================================
+//Signal
+//======================================
+//sym1
+[sym1_ema1,sym1_ema2,sym1_ema3,sym1_ema1_dir_val,sym1_ema2_dir_val,sym1_ema3_dir_val,sym1_close]=_ema()
+[sym1_macd,_,_]=_macd()
+sym1_rsi=_rsi()
+sym1_price=tostring(sym1_close)
+sym1_ema1_text=tostring(round_to_mintick(sym1_ema1))
+sym1_ema2_text=tostring(round_to_mintick(sym1_ema2))
+sym1_ema3_text=tostring(round_to_mintick(sym1_ema3))
+sym1_macd_text=tostring(round_to_mintick(sym1_macd))
+sym1_rsi_text=tostring(round_to_mintick(sym1_rsi))
+sym1_ema1_dir=sym1_ema1_dir_val==0?"☼":sym1_ema1_dir_val==1?"▲":sym1_ema1_dir_val==-1?"▼":"▬"
+sym1_ema2_dir=sym1_ema2_dir_val==0?"☼":sym1_ema2_dir_val==1?"▲":sym1_ema2_dir_val==-1?"▼":"▬"
+sym1_ema3_dir=sym1_ema3_dir_val==0?"☼":sym1_ema3_dir_val==1?"▲":sym1_ema3_dir_val==-1?"▼":"▬"
+sym1_macd_dir=cross(sym1_macd,0)?"☼":sym1_macd>0?"▲":sym1_macd<0?"▼":"▬"
+sym1_rsi_dir=cross(sym1_rsi,50)?"☼":sym1_rsi>50?"▲":sym1_rsi<50?"▼":"▬"
+sym1_bs_sig=
+       (sym1_macd>0 and sym1_rsi>50 and sym1_ema1_dir=="▲") and (sym1_ema2_dir=="☼" or sym1_ema3_dir=="☼")?"▲":
+       (sym1_macd<0 and sym1_rsi<50 and sym1_ema1_dir=="▼") and (sym1_ema2_dir=="☼" or sym1_ema3_dir=="☼")?"▼":
+       "▬"
+var sym1_arr=0
+var sym1_next=0
+if sym1_bs_sig=="▲"
+    sym1_arr:=1
+if sym1_bs_sig=="▼"
+    sym1_arr:=-1
+if sym1_bs_sig[1]=="▲" or sym1_bs_sig[1]=="▼" or sym1_bs_sig=="▬"
+    sym1_arr:=0
+if sym1_arr[1]==1
+    sym1_next:=-1
+if sym1_arr[1]==-1
+    sym1_next:=1
+sym1_sig_false=(sym1_next==-1 and high==min(high,sym1_ema1,sym1_ema2,sym1_ema3)) or (sym1_next==1 and low==max(low,sym1_ema1,sym1_ema2,sym1_ema3))
+sym1_sig_done=
+       (sym1_next==-1 and sym1_rsi>=rsi_ovb and (sym1_ema1>sym1_ema2 or sym1_ema1>sym1_ema3))
+       or
+       (sym1_next==1 and sym1_rsi<=rsi_ovs and (sym1_ema1<sym1_ema2 or sym1_ema1<sym1_ema3))
+if sym1_sig_false
+    sym1_next:=-sym1_next 
+sym1_sig_text=
+       sym1_arr==1 and sym1_next==1?"▲":
+       sym1_arr==-1 and sym1_next==-1?"▼":
+       sym1_sig_false?"X":
+       sym1_sig_done?"‼":
+       "▬"
+var sym1_entry_text=""
+if sym1_sig_text[1]=="▲"
+    sym1_entry_text:="▲"+tostring(sym1_close[1])
+if sym1_sig_text[1]=="▼"
+    sym1_entry_text:="▼"+tostring(sym1_close[1])
+if (sym1_sig_text[1]=="‼" and sym1_next==-1) or (sym1_sig_text[1]=="X" and sym1_next==1)
+    sym1_entry_text:="Exit Long"
+if (sym1_sig_text[1]=="‼" and sym1_next==1) or (sym1_sig_text[1]=="X" and sym1_next==-1)
+    sym1_entry_text:="Exit Short"
+if sym1_sig_text[1]=="▬"
+    sym1_entry_text:="▬"   
+var sym1_ago=0
+var sym1_ago_dir=""
+if sym1_sig_text=="▲" or sym1_sig_text=="▼"
+    sym1_ago:=0
+    sym1_ago_dir:=sym1_sig_text
+if sym1_sig_text=="▬" or sym1_sig_text=="X" or sym1_sig_text=="‼"
+    sym1_ago:=sym1_ago+1
+min=sym1_ago*timeframe.multiplier
+sym1_ago_text=
+       min<60?sym1_ago_dir+" "+tostring(min)+"m ago":
+       min-((round(min/60))*60)>=0?sym1_ago_dir+" "+tostring(round(min/60))+"h"+tostring(min-((round(min/60))*60))+"m ago":
+       sym1_ago_dir+" "+tostring(round(min/60-1))+"h"+tostring(min-((round(min/60-1))*60))+"m ago"
+//======================================
+//Table
+//======================================
+_tb_gr="=== Table ==="
+_bgcolor=input(color.new(color.silver,50),title="Background",inline="set",group=_tb_gr)
+_bordercol=input(color.new(color.navy,0),title="Border",inline="set",group=_tb_gr)
+_framecol=_bordercol
+_frame_width=2
+_border_width=1
+_size=size.normal
+_halign=text.align_left
+_halign_cen=text.align_center
+_halign_rgt=text.align_right
+_valign=text.align_center
+_textcol=input(color.new(color.aqua,0),title="Text",inline="set",group=_tb_gr)
+_bgcolor_up=color.new(color.blue,70)
+_bgcolor_dn=color.new(color.maroon,70)
+_bgcolor_cr=color.new(color.olive,70)
+var table _table = table.new(position.top_right, 5, 4,bgcolor=_bgcolor,frame_color=_framecol,frame_width=_frame_width,border_color=_bordercol,border_width=_border_width)
+cell_bg=color.new(color.navy,0)
+if barstate.isnew
+    //Heading1
+    table.cell(_table, 0, 0, text="TICKER",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 1, 0, text="PRICE",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 2, 0, text="EMA "+tostring(ema1_len),text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 3, 0, text="EMA "+tostring(ema2_len),text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 4, 0, text="EMA "+tostring(ema3_len),text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    //Heading2
+    table.cell(_table, 0, 2, text="MACD",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 1, 2, text="RSI",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 2, 2, text="SIGNAL",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 3, 2, text="MESSAGE",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    table.cell(_table, 4, 2, text="LAST SIGNAL",text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=cell_bg)
+    //Content1
+    table.cell(_table, 0, 1, text=syminfo.ticker,text_color=_textcol,text_halign=_halign,text_valign=_valign,text_size=_size)
+    table.cell(_table, 1, 1, text=sym1_price,text_color=_textcol,text_halign=_halign,text_valign=_valign,text_size=_size)
+    table.cell(_table, 2, 1, text=sym1_ema1_dir+" "+sym1_ema1_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=sym1_ema1_dir=="☼"?_bgcolor_cr:na)
+    table.cell(_table, 3, 1, text=sym1_ema2_dir+" "+sym1_ema2_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=sym1_ema2_dir=="☼"?_bgcolor_cr:na)
+    table.cell(_table, 4, 1, text=sym1_ema3_dir+" "+sym1_ema3_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=sym1_ema3_dir=="☼"?_bgcolor_cr:na)
+    //Content2
+    table.cell(_table, 0, 3, text=sym1_macd_dir+" "+sym1_macd_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,bgcolor=sym1_macd_dir=="☼"?_bgcolor_cr:na)
+    table.cell(_table, 1, 3, text=sym1_rsi_dir+" "+sym1_rsi_text,text_color=_textcol,text_halign=_halign,text_valign=_valign,text_size=_size,bgcolor=sym1_rsi_dir=="☼"?_bgcolor_cr:na)
+    table.cell(_table, 2, 3, text=sym1_sig_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,
+               bgcolor=sym1_sig_text=="▲"?_bgcolor_up:sym1_sig_text=="▼"?_bgcolor_dn:sym1_sig_text=="x" or sym1_sig_text=="‼"?_bgcolor_cr:na)
+    table.cell(_table, 3, 3, text=sym1_entry_text,text_color=_textcol,text_halign=_halign_cen,text_valign=_valign,text_size=_size,
+               bgcolor=sym1_sig_text[1]=="▲"?_bgcolor_up:sym1_sig_text[1]=="▼"?_bgcolor_dn:sym1_sig_text[1]=="x" or sym1_sig_text[1]=="‼"?_bgcolor_cr:na)
+    table.cell(_table, 4, 3, text=sym1_ago_text,text_color=_textcol,text_halign=_halign_rgt,text_valign=_valign,text_size=_size,bgcolor=sym1_ago_dir=="▲"?_bgcolor_up:sym1_ago_dir=="▼"?_bgcolor_dn:na)
+//======================================
+//Arrow
+//======================================
+arr_tt="=== Signal ==="
+arr_style=input("Arrow",title="Style",options=["Arrow","Triangle"],inline="set",group=arr_tt)
+buy_col=input(color.new(color.blue,0),title="Buy",inline="set",group=arr_tt)
+sell_col=input(color.new(color.red,0),title="Sell",inline="set",group=arr_tt)
+exit_col=input(color.new(color.orange,0),title="False",inline="set",group=arr_tt)
+plotshape(
+           sym1_sig_text=="▲" and arr_style=="Triangle"?sym1_arr:na, 
+           title="Buy", 
+           style=shape.triangleup, 
+           location=location.belowbar, 
+           color=buy_col, 
+           offset=0, 
+           size=size.tiny
+           )
+plotshape(
+           sym1_sig_text=="▼" and arr_style=="Triangle"?sym1_arr:na, 
+           title="Sell", 
+           style=shape.triangledown, 
+           location=location.abovebar, 
+           color=sell_col, 
+           offset=0, 
+           size=size.tiny
+           )
+plotshape(
+           sym1_sig_text=="X"?close:na, 
+           title="False", 
+           style=shape.xcross, 
+           location=location.abovebar, 
+           color=exit_col, 
+           offset=0, 
+           size=size.tiny
+           )
+plotshape(
+           sym1_sig_text=="‼"?close:na, 
+           title="Exit", 
+           style=shape.cross, 
+           location=location.abovebar, 
+           color=exit_col, 
+           offset=0, 
+           size=size.tiny
+           )
+var arr_val=0
+if sym1_sig_text=="▲"
+    arr_val:=1
+if sym1_sig_text=="▼"
+    arr_val:=-1    
+if sym1_sig_text[1]=="▼" or sym1_sig_text[1]=="▲"
+    arr_val:=0
+plotarrow(arr_style=="Arrow"?arr_val:na,
+           title="Arrow",
+           colorup=buy_col,
+           colordown=sell_col)
+//======================================
+//Plot EMA
+//======================================
+ema1_col=color.new(color.orange,0)
+ema2_col=color.new(color.blue,0)
+ema3_col=color.new(color.yellow,0)
+ema1_line=plot(sym1_ema1,title="EMA 1",color=ema1_col,style=plot.style_line,linewidth=1)
+ema2_line=plot(sym1_ema2,title="EMA 2",color=ema2_col,style=plot.style_line,linewidth=2)
+ema3_line=plot(sym1_ema3,title="EMA 3",color=ema3_col,style=plot.style_line,linewidth=3)
+//======================================
+//Backtest
+//======================================
+strategy.entry("Long", strategy.long, when=sym1_sig_text=="▲")
+strategy.entry("Short", strategy.short, when=sym1_sig_text=="▼")
+strategy.close_all(when=sym1_sig_text=="X" or sym1_sig_text=="‼")
+//EOF
+Expand (267 lines)

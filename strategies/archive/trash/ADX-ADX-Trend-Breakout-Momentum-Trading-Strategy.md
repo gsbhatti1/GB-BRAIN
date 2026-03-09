@@ -1,0 +1,55 @@
+``` pinescript
+/*backtest
+start: 2019-12-23 08:00:00
+end: 2024-11-27 00:00:00
+period: 1d
+basePeriod: 1d
+exchanges: [{"eid":"Futures_Binance","currency":"BTC_USDT"}]
+*/
+
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © HuntGatherTrade
+// ========================
+// NQ 30 minute, ES 30 minute
+
+//@version=5
+strategy("ADX Breakout", overlay=false, initial_capital=25000, default_qty_value=1)
+
+// ===============================
+// Input parameters
+// ===============================
+stopLoss = input(1000.0, title="Stop Loss ($)", group="Exits")
+session = input("0730-1430:1234567", group="Trade Session")
+highestLB = input(34, title="Highest lookback window", group="Indicator values")
+
+// ===============================
+// Trade Session Handling
+// ===============================
+t = time(timeframe.period, session)
+
+// Reset numTrades at the start of each session
+var int numTrades = 0
+is_new_session = ta.change(time("D")) != 0
+if is_new_session
+    numTrades := 0
+
+// ===============================
+// Entry Conditions
+// ===============================
+[plusDI, minusDI, adxValue] = ta.dmi(50, 14)
+entryCondition = (close >= ta.highest(close, highestLB)[1]) and (adxValue < 17.5) and (strategy.position_size == 0) and (numTrades < 3) and not na(t)
+
+// ===============================
+// Execute Entry
+// ===============================
+var float stopPricePlot = na
+
+if entryCondition
+    entryPrice = close + syminfo.mintick
+    strategy.entry("Long Entry", strategy.long, stop=entryPrice)
+    //stopPrice = strategy.position_avg_price - (stopLoss / syminfo.pointvalue)
+    //strategy.exit("Stop Loss", "Long Entry", stop=stopPrice)
+    numTrades += 1
+
+if (strategy.position_size > 0) and (
+```

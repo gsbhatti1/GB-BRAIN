@@ -112,6 +112,10 @@ LOG_LEVEL = "INFO"
 LOG_FILE  = ROOT_DIR / "gb_brain.log"
 
 # ── Ensure directories exist ─────────────────
-for d in [STAGING_DIR, BEST_DIR / "crypto", BEST_DIR / "indices",
-          ARCHIVE_DIR, CUSTOM_DIR, DATA_CACHE_DIR, DB_PATH.parent]:
+# Ticker-specific folders for GEMs
+TICKER_FOLDERS = ["btc", "eth", "sol", "nas100", "us30", "spx"]
+
+for d in [STAGING_DIR, ARCHIVE_DIR, CUSTOM_DIR, DATA_CACHE_DIR, DB_PATH.parent]:
     d.mkdir(parents=True, exist_ok=True)
+for tf in TICKER_FOLDERS:
+    (BEST_DIR / tf).mkdir(parents=True, exist_ok=True)
