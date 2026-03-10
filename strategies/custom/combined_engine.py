@@ -295,8 +295,20 @@ class CombinedEngine:
         # Cumulative delta (rolling 10-bar sum)
         cum_delta = np.convolve(delta, np.ones(10), mode='same')
 
-        # ─── Score every bar that has at least one signal ───
+        # ─── Score signals using proximity window (not exact bar match) ───
         combined_signals: List[CombinedSignal] = []
+        WINDOW = 5  # Look for matching signals within 5 bars
+
+        # Build lookup: for each bar, find nearest cipher/parallax signal within window
+        def find_nearby(signals_dict, bar, window=WINDOW):
+            for offset in range(window + 1):
+                if bar - offset in signals_dict:
+                    return signals_dict[bar - offset]
+                if bar + offset in signals_dict:
+                    return signals_dict[bar + offset]
+            return None
+
+        # Score every bar that has at least one signal
         all_signal_bars = set(cipher_by_bar.keys()) | set(parallax_by_bar.keys())
 
         for bar in sorted(all_signal_bars):
@@ -304,8 +316,8 @@ class CombinedEngine:
                 continue
 
             ts = df.index[bar]
-            ci = cipher_by_bar.get(bar)
-            px = parallax_by_bar.get(bar)
+            ci = cipher_by_bar.get(bar) or find_nearby(cipher_by_bar, bar)
+            px = parallax_by_bar.get(bar) or find_nearby(parallax_by_bar, bar)
 
             # Determine direction (both must agree if both present)
             if ci and px:
@@ -358,6 +370,11 @@ class CombinedEngine:
                     reasons.append("BRK")
                 conf_ratio = px.confirm_count / max(1, self.parallax.confirm_bars)
                 score += w.get("parallax_confirm", 10) * min(conf_ratio, 1.0)
+
+            # BOTH engines agree = massive bonus
+            if ci and px:
+                score += w.get("both_agree_bonus", 25)
+                reasons.append("BOTH★")
 
             # RSI safe zone
             if self.parallax.rsi_lo <= rsi_arr[bar] <= self.parallax.rsi_hi:

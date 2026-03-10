@@ -14,12 +14,11 @@ STOP → Backup → Patch → Run → Verify
 """
 
 import sys
-import json
 import logging
 import argparse
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 import pandas as pd
 import numpy as np
@@ -27,12 +26,12 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from config.settings import DB_PATH, DATA_CACHE_DIR, BACKTEST_CASH
+from config.settings import DATA_CACHE_DIR, BACKTEST_CASH
 from db.brain_db import connect
 from strategies.custom.ticker_presets import get_preset, list_tickers, PRESETS
-from strategies.custom.cipher_engine import CipherEngine, CipherSignal
-from strategies.custom.parallax_engine import ParallaxEngine, ParallaxSignal
-from strategies.custom.combined_engine import CombinedEngine, CombinedSignal
+from strategies.custom.cipher_engine import CipherEngine
+from strategies.custom.parallax_engine import ParallaxEngine
+from strategies.custom.combined_engine import CombinedEngine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("gb_brain.custom_bt")
@@ -42,36 +41,133 @@ logger = logging.getLogger("gb_brain.custom_bt")
 # DATA LOADING
 # ══════════════════════════════════════════════
 
+OHLCV_COLUMNS = ["open", "high", "low", "close", "volume"]
+REQUIRED_PRICE_COLUMNS = ["open", "high", "low", "close"]
+
+
+def _flatten_columns(columns) -> list[str]:
+    """Flatten standard or MultiIndex columns into lowercase names."""
+    flat = []
+    for col in columns:
+        if isinstance(col, tuple):
+            name = str(col[0]).strip().lower()
+        else:
+            name = str(col).strip().lower()
+        flat.append(name)
+    return flat
+
+
+def _looks_like_ohlcv(df: pd.DataFrame) -> bool:
+    """Quick shape check for cached OHLCV frames."""
+    cols = set(_flatten_columns(df.columns))
+    return all(col in cols for col in REQUIRED_PRICE_COLUMNS)
+
+
+def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize index and OHLCV columns into a clean numeric frame."""
+    if df is None or df.empty:
+        return pd.DataFrame(columns=OHLCV_COLUMNS)
+
+    df = df.copy()
+    df.columns = _flatten_columns(df.columns)
+
+    # Parse timestamp index safely. Junk rows like 'Ticker' / 'Datetime' become NaT and get dropped.
+    df.index = pd.to_datetime(pd.Index(df.index.astype(str)), utc=True, errors="coerce", format="mixed")
+    df.index.name = "datetime"
+    df = df[df.index.notna()]
+
+    # Remove duplicate timestamps and keep chronological order.
+    if not df.empty:
+        df = df[~df.index.duplicated(keep="last")]
+        df = df.sort_index()
+
+    # Coerce OHLCV to numeric.
+    for col in OHLCV_COLUMNS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Validate required price columns.
+    missing = [col for col in REQUIRED_PRICE_COLUMNS if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing column(s): {', '.join(missing)}")
+
+    # Drop broken rows where any core OHLC value is non-numeric.
+    df = df.dropna(subset=REQUIRED_PRICE_COLUMNS)
+
+    if "volume" not in df.columns:
+        df["volume"] = 1.0
+    else:
+        df["volume"] = df["volume"].fillna(0.0)
+
+    if df.empty:
+        raise ValueError("No valid OHLC rows after normalization")
+
+    return df[OHLCV_COLUMNS]
+
+
+def _read_cached_csv(csv_path: Path) -> pd.DataFrame:
+    """Read cached CSV, supporting both flat caches and yfinance-exported CSVs."""
+    read_errors = []
+
+    # Flat read works for clean caches and also for yfinance CSV exports with junk header rows,
+    # as long as normalization drops the non-datetime rows afterward.
+    try:
+        df = pd.read_csv(csv_path, index_col=0)
+        return _normalize_df(df)
+    except Exception as exc:
+        read_errors.append(f"flat read failed: {exc}")
+
+    # Fallback to yfinance-style multi-row header: Price/Ticker + Datetime index label.
+    try:
+        df = pd.read_csv(csv_path, header=[0, 1], index_col=0)
+        if _looks_like_ohlcv(df):
+            return _normalize_df(df)
+        read_errors.append("multi-header read failed: columns did not look like OHLCV")
+    except Exception as exc:
+        read_errors.append(f"multi-header read failed: {exc}")
+
+    raise ValueError(f"Could not parse cached CSV {csv_path.name}: {' | '.join(read_errors)}")
+
+
+def _write_cached_csv(df: pd.DataFrame, csv_path: Path) -> None:
+    """Write a clean, flat OHLCV cache so future reads are deterministic."""
+    clean = _normalize_df(df)
+    clean.to_csv(csv_path, index_label="datetime")
+
+
 def load_data(ticker: str, timeframe: str, preset: dict) -> pd.DataFrame:
     """Load OHLCV data from cache or download."""
     yahoo_sym = preset.get("yahoo_symbol")
     binance_sym = preset.get("binance_symbol")
 
-    # Try cached data first
-    cache_patterns = [
-        DATA_CACHE_DIR / f"{ticker}_{timeframe}.parquet",
-        DATA_CACHE_DIR / f"{yahoo_sym}_{timeframe}.parquet" if yahoo_sym else None,
-        DATA_CACHE_DIR / f"{binance_sym}_{timeframe}.parquet" if binance_sym else None,
-    ]
+    # Build search names (ticker first, then yahoo, then binance)
+    names = []
+    for name in [ticker, yahoo_sym, binance_sym]:
+        if name and name not in names:
+            names.append(name)
 
-    for path in cache_patterns:
-        if path and path.exists():
-            logger.info(f"Loading cached: {path}")
-            df = pd.read_parquet(path)
-            df = _normalize_df(df)
-            df = _align_timezone(df, ticker)
-            return df
+    # Try CSV first (always works, no extra dependencies)
+    for name in names:
+        csv_path = DATA_CACHE_DIR / f"{name}_{timeframe}.csv"
+        if csv_path.exists():
+            logger.info(f"Loading CSV: {csv_path}")
+            try:
+                return _read_cached_csv(csv_path)
+            except Exception as exc:
+                logger.warning(f"Failed parsing CSV {csv_path.name}: {exc}")
 
-    # Try CSV
-    for path in cache_patterns:
-        if path:
-            csv_path = path.with_suffix(".csv")
-            if csv_path.exists():
-                logger.info(f"Loading CSV: {csv_path}")
-                df = pd.read_csv(csv_path, parse_dates=True, index_col=0)
-                df = _normalize_df(df)
-                df = _align_timezone(df, ticker)
-                return df
+    # Try parquet (needs pyarrow/fastparquet)
+    for name in names:
+        pq_path = DATA_CACHE_DIR / f"{name}_{timeframe}.parquet"
+        if pq_path.exists():
+            try:
+                logger.info(f"Loading parquet: {pq_path}")
+                df = pd.read_parquet(pq_path)
+                return _normalize_df(df)
+            except ImportError:
+                logger.warning("Parquet file found but pyarrow not installed. pip install pyarrow")
+            except Exception as exc:
+                logger.warning(f"Failed parsing parquet {pq_path.name}: {exc}")
 
     # Download via yfinance
     try:
@@ -81,82 +177,23 @@ def load_data(ticker: str, timeframe: str, preset: dict) -> pd.DataFrame:
         logger.info(f"Downloading {sym} {timeframe} from Yahoo Finance...")
         period_map = {"1m": "7d", "5m": "60d", "15m": "60d", "30m": "60d", "1h": "730d"}
         period = period_map.get(timeframe, "60d")
-
-        data = yf.download(
-            sym,
-            period=period,
-            interval=timeframe,
-            progress=False,
-            auto_adjust=False,
-        )
-
+        data = yf.download(sym, period=period, interval=timeframe, progress=False, auto_adjust=False)
         if data.empty:
             logger.error(f"No data for {sym} {timeframe}")
-            return pd.DataFrame()
+            return pd.DataFrame(columns=OHLCV_COLUMNS)
 
-        save_path = DATA_CACHE_DIR / f"{ticker}_{timeframe}.parquet"
-        data.to_parquet(save_path)
+        clean = _normalize_df(data)
+
+        # Cache as flat CSV to avoid future header-shape issues.
+        save_path = DATA_CACHE_DIR / f"{ticker}_{timeframe}.csv"
+        _write_cached_csv(clean, save_path)
         logger.info(f"Cached to {save_path}")
-
-        data = _normalize_df(data)
-        data = _align_timezone(data, ticker)
-        return data
-
-    except Exception as e:
-        logger.error(f"Failed to load data: {e}")
-        return pd.DataFrame()
+        return clean
+    except Exception as exc:
+        logger.error(f"Failed to load data: {exc}")
+        return pd.DataFrame(columns=OHLCV_COLUMNS)
 
 
-def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize OHLCV columns, including yfinance MultiIndex columns."""
-    if df is None or df.empty:
-        return pd.DataFrame()
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [str(col[0]).lower().strip() for col in df.columns]
-    else:
-        normalized = []
-        for c in df.columns:
-            if isinstance(c, tuple):
-                normalized.append(str(c[0]).lower().strip())
-            else:
-                normalized.append(str(c).lower().strip())
-        df.columns = normalized
-
-    df = df.loc[:, ~pd.Index(df.columns).duplicated()]
-
-    required = ["open", "high", "low", "close"]
-    for col in required:
-        if col not in df.columns:
-            raise ValueError(f"Missing column: {col}")
-
-    if "volume" not in df.columns:
-        df["volume"] = 1.0
-
-    keep = [c for c in ["open", "high", "low", "close", "volume"] if c in df.columns]
-    df = df[keep].copy()
-    return df
-
-
-def _align_timezone(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
-    """Convert index into the timezone expected by the strategy logic."""
-    if df is None or df.empty:
-        return pd.DataFrame()
-
-    idx = pd.to_datetime(df.index, errors="coerce")
-
-    if getattr(idx, "tz", None) is None:
-        idx = idx.tz_localize("UTC")
-
-    if ticker in {"US30", "NAS100", "SPX500"}:
-        idx = idx.tz_convert("America/New_York").tz_localize(None)
-    else:
-        idx = idx.tz_convert("UTC").tz_localize(None)
-
-    out = df.copy()
-    out.index = idx
-    out = out[~out.index.isna()].sort_index()
-    return out
 # ══════════════════════════════════════════════
 # TRADE SIMULATOR
 # ══════════════════════════════════════════════
@@ -172,16 +209,14 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
     n = len(c)
 
     trades = []
-    capital = BACKTEST_CASH
-    peak_capital = capital
 
     for sig in signals:
-        bar = sig.bar if hasattr(sig, 'bar') else sig["bar"]
-        direction = sig.direction if hasattr(sig, 'direction') else sig["direction"]
-        entry_price = sig.entry_price if hasattr(sig, 'entry_price') else sig["entry_price"]
-        sl = sig.stop_loss if hasattr(sig, 'stop_loss') else sig["stop_loss"]
-        tp1 = sig.tp1 if hasattr(sig, 'tp1') else sig["tp1"]
-        tp3 = sig.tp3 if hasattr(sig, 'tp3') else sig["tp3"]
+        bar = sig.bar if hasattr(sig, "bar") else sig["bar"]
+        direction = sig.direction if hasattr(sig, "direction") else sig["direction"]
+        entry_price = sig.entry_price if hasattr(sig, "entry_price") else sig["entry_price"]
+        sl = sig.stop_loss if hasattr(sig, "stop_loss") else sig["stop_loss"]
+        tp1 = sig.tp1 if hasattr(sig, "tp1") else sig["tp1"]
+        tp3 = sig.tp3 if hasattr(sig, "tp3") else sig["tp3"]
 
         if bar >= n - 1:
             continue
@@ -194,8 +229,8 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
         be_hit = False
         tp1_hit = False
         trailing = False
-        trail_peak = entry_price if direction == 1 else entry_price
-        trail_trough = entry_price if direction == -1 else entry_price
+        trail_peak = entry_price
+        trail_trough = entry_price
         exit_price = None
         exit_bar = None
         exit_reason = ""
@@ -204,7 +239,6 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
 
         for j in range(bar + 1, min(bar + 200, n)):  # Max 200 bars per trade
             if direction == 1:  # LONG
-                # Check SL
                 current_sl = entry_price if be_hit else sl
                 if l[j] <= current_sl:
                     exit_price = current_sl
@@ -212,24 +246,20 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
                     exit_reason = "BE" if be_hit else "SL"
                     break
 
-                # Check TP3 (max target)
                 if h[j] >= tp3:
                     exit_price = tp3
                     exit_bar = j
                     exit_reason = "TP3"
                     break
 
-                # Check TP1 → start trailing
                 if not tp1_hit and h[j] >= tp1:
                     tp1_hit = True
                     trailing = True
                     trail_peak = h[j]
 
-                # Break-even at 1R
                 if not be_hit and h[j] >= one_r:
                     be_hit = True
 
-                # Trailing stop
                 if trailing:
                     trail_peak = max(trail_peak, h[j])
                     trail_pct = preset.get("parallax", {}).get("trail_pct", 0.40)
@@ -272,7 +302,6 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
                         exit_reason = "TRAIL"
                         break
 
-        # If no exit found, close at last bar
         if exit_price is None:
             exit_price = c[min(bar + 199, n - 1)]
             exit_bar = min(bar + 199, n - 1)
@@ -282,31 +311,38 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
         rr = pnl_pts / risk if risk > 0 else 0
 
         score = 0
-        if hasattr(sig, 'confluence_score'):
+        if hasattr(sig, "confluence_score"):
             score = sig.confluence_score
-        elif hasattr(sig, 'score'):
+        elif hasattr(sig, "score"):
             score = sig.score
 
-        trades.append({
-            "entry_bar": bar,
-            "exit_bar": exit_bar,
-            "direction": direction,
-            "entry_price": entry_price,
-            "exit_price": exit_price,
-            "sl": sl,
-            "tp1": tp1,
-            "tp3": tp3,
-            "pnl_pts": pnl_pts,
-            "rr": rr,
-            "exit_reason": exit_reason,
-            "score": score,
-            "risk": risk,
-        })
+        trades.append(
+            {
+                "entry_bar": bar,
+                "exit_bar": exit_bar,
+                "direction": direction,
+                "entry_price": entry_price,
+                "exit_price": exit_price,
+                "sl": sl,
+                "tp1": tp1,
+                "tp3": tp3,
+                "pnl_pts": pnl_pts,
+                "rr": rr,
+                "exit_reason": exit_reason,
+                "score": score,
+                "risk": risk,
+            }
+        )
 
-    # ─── Compute metrics ───
     if not trades:
-        return {"total_trades": 0, "win_rate": 0, "total_return": 0,
-                "profit_factor": 0, "avg_rr": 0, "max_drawdown": 0}
+        return {
+            "total_trades": 0,
+            "win_rate": 0,
+            "total_return": 0,
+            "profit_factor": 0,
+            "avg_rr": 0,
+            "max_drawdown": 0,
+        }
 
     wins = [t for t in trades if t["pnl_pts"] > 0]
     losses = [t for t in trades if t["pnl_pts"] <= 0]
@@ -317,7 +353,6 @@ def simulate_trades(signals: list, df: pd.DataFrame, preset: dict) -> Dict[str, 
     pf = total_win_pts / max(total_loss_pts, 0.01)
     wr = len(wins) / len(trades) * 100
 
-    # Equity curve for drawdown
     equity = [BACKTEST_CASH]
     for t in trades:
         equity.append(equity[-1] + t["pnl_pts"])
@@ -370,7 +405,6 @@ def run_backtest(ticker: str, timeframe: str, strategy: str = "all"):
 
     results = {}
 
-    # ─── CIPHER ───
     if strategy in ("all", "cipher"):
         logger.info("Running Cipher engine...")
         cipher = CipherEngine(preset["cipher"])
@@ -381,7 +415,6 @@ def run_backtest(ticker: str, timeframe: str, strategy: str = "all"):
             results["cipher"] = cipher_results
             _print_results("CIPHER", cipher_results)
 
-    # ─── PARALLAX ───
     if strategy in ("all", "parallax"):
         logger.info("Running Parallax engine...")
         parallax = ParallaxEngine(preset["parallax"])
@@ -392,7 +425,6 @@ def run_backtest(ticker: str, timeframe: str, strategy: str = "all"):
             results["parallax"] = parallax_results
             _print_results("PARALLAX", parallax_results)
 
-    # ─── COMBINED ───
     if strategy in ("all", "combined"):
         logger.info("Running Combined engine...")
         combined = CombinedEngine(preset)
@@ -403,7 +435,6 @@ def run_backtest(ticker: str, timeframe: str, strategy: str = "all"):
             results["combined"] = combined_results
             _print_results("COMBINED", combined_results)
 
-            # Show top signals by score
             top = sorted(combined_sigs, key=lambda s: s.confluence_score, reverse=True)[:5]
             logger.info("  Top 5 signals by confluence score:")
             for s in top:
@@ -417,8 +448,10 @@ def _print_results(name: str, r: dict):
     logger.info(f"  ─── {name} Results ───")
     logger.info(f"  Trades: {r['total_trades']} | Win Rate: {r['win_rate']:.1f}% | PF: {r['profit_factor']:.2f}")
     logger.info(f"  Total Pts: {r['total_pts']:.1f} | Avg R:R: {r['avg_rr']:.2f} | Max DD: {r['max_drawdown']:.1f}%")
-    logger.info(f"  Exits: TP3={r['exit_reasons']['TP3']} TRAIL={r['exit_reasons']['TRAIL']} SL={r['exit_reasons']['SL']} BE={r['exit_reasons']['BE']}")
-    if r['avg_score'] > 0:
+    logger.info(
+        f"  Exits: TP3={r['exit_reasons']['TP3']} TRAIL={r['exit_reasons']['TRAIL']} SL={r['exit_reasons']['SL']} BE={r['exit_reasons']['BE']}"
+    )
+    if r.get("avg_score", 0) > 0:
         logger.info(f"  Avg Signal Score: {r['avg_score']:.1f}")
 
 
@@ -427,39 +460,43 @@ def save_to_db(ticker: str, timeframe: str, strategy_name: str, results: dict):
     conn = connect()
     cursor = conn.cursor()
 
-    # Insert or get strategy
     cursor.execute(
         "INSERT OR IGNORE INTO strategies (name, category, source_file) VALUES (?, ?, ?)",
-        (f"GB_{strategy_name}_{ticker}", "custom", f"strategies/custom/{strategy_name}_engine.py")
+        (f"GB_{strategy_name}_{ticker}", "custom", f"strategies/custom/{strategy_name}_engine.py"),
     )
     conn.commit()
 
     cursor.execute("SELECT id FROM strategies WHERE name = ?", (f"GB_{strategy_name}_{ticker}",))
     row = cursor.fetchone()
     if not row:
+        conn.close()
         return
     strategy_id = row[0]
 
-    # Insert backtest result
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO backtest_results
         (strategy_id, symbol, timeframe, total_trades, wins, losses,
          win_rate, total_return, max_drawdown, profit_factor, avg_rr, composite_score, status, run_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        strategy_id, ticker, timeframe,
-        results.get("total_trades", 0),
-        results.get("wins", 0),
-        results.get("losses", 0),
-        results.get("win_rate", 0),
-        results.get("total_return", 0),
-        results.get("max_drawdown", 0),
-        results.get("profit_factor", 0),
-        results.get("avg_rr", 0),
-        results.get("win_rate", 0) * 0.35 + results.get("profit_factor", 0) * 2,
-        "GEM" if results.get("win_rate", 0) >= 55 and results.get("total_return", 0) > 0 else "PASS",
-        datetime.now().isoformat(),
-    ))
+        """,
+        (
+            strategy_id,
+            ticker,
+            timeframe,
+            results.get("total_trades", 0),
+            results.get("wins", 0),
+            results.get("losses", 0),
+            results.get("win_rate", 0),
+            results.get("total_return", 0),
+            results.get("max_drawdown", 0),
+            results.get("profit_factor", 0),
+            results.get("avg_rr", 0),
+            results.get("win_rate", 0) * 0.35 + results.get("profit_factor", 0) * 2,
+            "GEM" if results.get("win_rate", 0) >= 55 and results.get("total_return", 0) > 0 else "PASS",
+            datetime.now().isoformat(),
+        ),
+    )
     conn.commit()
     conn.close()
     logger.info(f"  Saved to SQLite: GB_{strategy_name}_{ticker}")
@@ -503,9 +540,10 @@ def main():
                         if strat_results.get("total_trades", 0) > 0:
                             save_to_db(ticker, tf, strat_name, strat_results)
 
-            except Exception as e:
-                logger.error(f"Error testing {ticker} {tf}: {e}")
+            except Exception as exc:
+                logger.error(f"Error testing {ticker} {tf}: {exc}")
                 import traceback
+
                 traceback.print_exc()
 
     print("\n" + "═" * 60)

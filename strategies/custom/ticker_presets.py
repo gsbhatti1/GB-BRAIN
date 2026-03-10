@@ -60,21 +60,22 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 65,             # Score 0-100, enter above this
+            "entry_threshold": 40,             # Score 0-100, enter above this
             "weights": {
                 "choch_active": 20,
                 "fvg_golden": 15,
                 "ob_proximity": 10,
                 "ote_zone": 10,
-                "premium_discount": 5,
+                "premium_discount": 8,
                 "parallax_trap": 20,
                 "parallax_confirm": 10,
                 "rsi_safe": 5,
-                "bollinger_position": 5,
-                "volume_above_avg": 5,
+                "bollinger_position": 8,
+                "volume_above_avg": 8,
                 "no_news_window": 5,
                 "not_monday": 3,
                 "round_level_proximity": 7,
+                "both_agree_bonus": 25,
             },
         },
 
@@ -142,7 +143,7 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 65,
+            "entry_threshold": 40,
             "weights": {
                 "choch_active": 20,
                 "fvg_golden": 15,
@@ -222,7 +223,7 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 70,             # Higher threshold — SPX is less volatile
+            "entry_threshold": 40,             # Higher threshold — SPX is less volatile
             "weights": {
                 "choch_active": 20,
                 "fvg_golden": 15,
@@ -301,7 +302,7 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 60,             # Lower threshold — more opportunity in crypto
+            "entry_threshold": 35,             # Lower threshold — more opportunity in crypto
             "weights": {
                 "choch_active": 20,
                 "fvg_golden": 15,
@@ -379,7 +380,7 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 60,
+            "entry_threshold": 35,
             "weights": {
                 "choch_active": 20,
                 "fvg_golden": 15,
@@ -457,7 +458,7 @@ PRESETS = {
         },
 
         "combined": {
-            "entry_threshold": 55,             # Lower — SOL has proven high WR
+            "entry_threshold": 30,             # Lower — SOL has proven high WR
             "weights": {
                 "choch_active": 18,
                 "fvg_golden": 12,

@@ -1,0 +1,16 @@
+{
+  "default_days_window": 90,
+  "target_symbols": {
+    "crypto": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+    "indices": ["US30", "NAS100", "SPX500"]
+  },
+  "target_timeframes": ["5m", "15m"],
+  "min_trades_per_run": 50,
+  "risk_limits": {
+    "max_dd_pct": 30.0,
+    "min_pf": 1.3
+  },
+  "csv": {
+    "results_dir": "backtest/data_cache/results"
+  }
+}

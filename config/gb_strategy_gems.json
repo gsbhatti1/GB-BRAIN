@@ -1,0 +1,25 @@
+{
+  "parallax": {
+    "SPX": {
+      "5m": {
+        "params": {
+          "rr": 1.5,
+          "tp3_mult": 3.0
+        },
+        "metrics": {
+          "pnl_pct": 0.0,
+          "max_dd_pct": 0.0,
+          "trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        "last_test": {
+          "days_window": 90,
+          "from": "2026-01-01",
+          "to": "2026-03-31"
+        },
+        "tags": ["indices", "test-local"]
+      }
+    }
+  }
+}
