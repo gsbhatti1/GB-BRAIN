@@ -1,5 +1,127 @@
 # GB-BRAIN SETUP — Do Exactly This
+Keep this as the human install/run guide.
 
+How I would review the repo once you upload it
+
+I’ll do it in this order:
+
+map file tree
+
+identify true entrypoints
+
+trace data flow between modules
+
+inspect DB schema and writes
+
+test the scripts that connect sections together
+
+find dead paths, duplicated logic, and hidden coupling
+
+produce one-page pipeline drawing
+
+produce V2 patch pack + setup guide + handoff notes
+
+PC or VPS?
+
+My recommendation:
+
+PC / workstation
+
+Use for:
+
+strategy research
+
+harvest jobs
+
+parser development
+
+heavy backtests
+
+local AI / Ollama / Qwen experiments
+
+repo editing
+
+VPS
+
+Use for:
+
+24/7 paper/live bots
+
+schedulers
+
+weekly calibration jobs
+
+alerts
+
+health monitoring
+
+auto restarts
+
+Best split
+
+GitHub = code truth
+
+PC = dev + R&D + backtest lab
+
+VPS = production runner
+
+SQLite/Postgres on VPS = live state
+
+optional home workstation = heavier local AI agent work
+
+For your case, I would not run the full always-on production loop only on your PC. A VPS is better for uptime and restarts. But I also would not run heavy local-agent experimentation on the same VPS that holds trading keys.
+
+About OpenClaw + Ollama + Qwen 3.5
+
+Ollama currently lists the qwen3.5 family in its official model library, so the local-model side is real and usable.
+
+But OpenClaw has current security concerns around broad desktop/data access and cross-system permissions, so I would keep it away from live exchange credentials unless you isolate it very hard. Reuters specifically reports security warnings around personal data access and broader compliance concerns as adoption grows.
+
+So my architecture choice is:
+
+local AI agent box = research / coding / repo analysis
+
+production bot box = trading only
+
+no shared browser sessions
+
+no unrestricted agent access to exchange secrets
+
+read-only APIs first wherever possible
+
+The automation loop you want
+
+This is the compact target:
+
+GitHub push
+   ↓
+CI checks
+   ↓
+PC/VPS sync latest tagged build
+   ↓
+DB migration check
+   ↓
+backtest / walk-forward / shadow-live observer
+   ↓
+7-day calibration
+   ↓
+promote / demote gems
+   ↓
+GB-CRYPTO-BOT + GB-INDICES-BOT
+   ↓
+PROJECT_HANDOFF.md updated
+The AI-agent layout I’d design
+
+One coordinator, several specialists:
+
+Orchestrator Agent
+├── Repo Map Agent
+├── Strategy R&D Agent
+├── Backtest Audit Agent
+├── Live Observer Agent
+├── Weekly Calibration Agent
+├── Ops/Deploy Agent
+└── Documentation / Memory Agent
 ## Step 1: Put files in the right places
 
 ```
