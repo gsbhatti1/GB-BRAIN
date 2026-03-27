@@ -1,24 +1,234 @@
 {
-  "parallax": {
-    "SPX": {
-      "5m": {
-        "params": {
-          "rr": 1.5,
-          "tp3_mult": 3.0
-        },
-        "metrics": {
-          "pnl_pct": 0.0,
-          "max_dd_pct": 0.0,
-          "trades": 0,
-          "win_rate_pct": 0.0,
-          "profit_factor": 0.0
-        },
-        "last_test": {
-          "days_window": 90,
-          "from": "2026-01-01",
-          "to": "2026-03-31"
-        },
-        "tags": ["indices", "test-local"]
+  "meta": {
+    "version": "phase1",
+    "last_updated": "2026-03-10",
+    "owner": "GB-BRAIN",
+    "purpose": "Runtime truth for bot profiles, strategy family overrides, and manual signal presets."
+  },
+  "runtime_profiles": {
+    "gb-crypto-bot": {
+      "bot_name": "GB-CRYPTO-BOT",
+      "broker": "blofin",
+      "mode": "futures-grid",
+      "category": "crypto",
+      "default_timeframe": "15m",
+      "paper_default": true,
+      "symbols": [
+        "BTC",
+        "ETH",
+        "SOL"
+      ],
+      "engine_families": [
+        "combined",
+        "cipher",
+        "parallax"
+      ],
+      "risk": {
+        "max_position_pct": 0.15,
+        "max_concurrent_positions": 2,
+        "default_leverage": {
+          "BTC": 5,
+          "ETH": 5,
+          "SOL": 3
+        }
+      }
+    },
+    "gb-indices": {
+      "bot_name": "GB-INDICES",
+      "broker": "oanda",
+      "mode": "signal-execution",
+      "category": "indices",
+      "default_timeframe": "15m",
+      "paper_default": true,
+      "symbols": [
+        "US30",
+        "NAS100",
+        "SPX500"
+      ],
+      "engine_families": [
+        "combined",
+        "cipher",
+        "parallax"
+      ],
+      "risk": {
+        "max_position_pct": 0.1,
+        "max_concurrent_positions": 1,
+        "default_leverage": {
+          "US30": 1,
+          "NAS100": 1,
+          "SPX500": 1
+        }
+      }
+    },
+    "manual-signals": {
+      "bot_name": "MANUAL-SIGNALS",
+      "broker": "manual",
+      "mode": "alert-only",
+      "category": "manual",
+      "default_timeframe": "15m",
+      "symbols": [
+        "BTC",
+        "ETH",
+        "SOL",
+        "US30",
+        "NAS100",
+        "SPX500"
+      ],
+      "engine_families": [
+        "cipher",
+        "parallax",
+        "combined"
+      ],
+      "risk": {
+        "notes": "Manual lane uses alerts and observer logging, not auto execution."
+      }
+    }
+  },
+  "strategy_families": {
+    "cipher": {
+      "US30": {
+        "5m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      },
+      "NAS100": {
+        "5m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      },
+      "SPX500": {
+        "15m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      },
+      "BTC": {
+        "15m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      },
+      "ETH": {
+        "15m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      },
+      "SOL": {
+        "5m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Baseline custom preset only."
+        }
+      }
+    },
+    "parallax": {
+      "US30": {
+        "5m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Needs live honesty verification on indices."
+        }
+      },
+      "NAS100": {
+        "5m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Needs live honesty verification on indices."
+        }
+      },
+      "SPX500": {
+        "15m": {
+          "status": "shadow",
+          "params": {},
+          "notes": "Needs live honesty verification on indices."
+        }
+      },
+      "BTC": {
+        "15m": {
+          "status": "paper",
+          "params": {
+            "tp3_mult": 3.0
+          },
+          "notes": "Paper-track before full promotion."
+        }
+      },
+      "ETH": {
+        "15m": {
+          "status": "paper",
+          "params": {},
+          "notes": "Paper-track before full promotion."
+        }
+      },
+      "SOL": {
+        "15m": {
+          "status": "paper",
+          "params": {},
+          "notes": "Paper-track before full promotion."
+        }
+      }
+    },
+    "combined": {
+      "US30": {
+        "5m": {
+          "status": "shadow",
+          "params": {
+            "entry_threshold": 42
+          },
+          "notes": "Raise threshold after noisy close-only tests."
+        }
+      },
+      "NAS100": {
+        "5m": {
+          "status": "shadow",
+          "params": {
+            "entry_threshold": 42
+          },
+          "notes": "Raise threshold after noisy close-only tests."
+        }
+      },
+      "SPX500": {
+        "15m": {
+          "status": "paper",
+          "params": {
+            "entry_threshold": 42
+          },
+          "notes": "Stable enough for paper lane."
+        }
+      },
+      "BTC": {
+        "15m": {
+          "status": "paper",
+          "params": {
+            "entry_threshold": 40
+          },
+          "notes": "Primary crypto combined lane."
+        }
+      },
+      "ETH": {
+        "1h": {
+          "status": "paper",
+          "params": {
+            "entry_threshold": 40
+          },
+          "notes": "Higher timeframe quality lane."
+        }
+      },
+      "SOL": {
+        "15m": {
+          "status": "paper",
+          "params": {
+            "entry_threshold": 34
+          },
+          "notes": "Highest-conviction crypto lane from current backtests."
+        }
       }
     }
   }

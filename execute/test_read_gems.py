@@ -1,28 +1,21 @@
-import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-def load_gems(path: str = "config/gb_strategy_gems.json") -> dict:
-    with (ROOT / path).open("r", encoding="utf-8") as f:
-        return json.load(f)
+import json
 
-def strategy_name_key(name: str) -> str:
-    return name.lower().replace(" ", "-")
-
-def get_gem(gems: dict, strategy_name: str, symbol: str, interval_sec: int) -> dict | None:
-    tf_map = {60: "1m", 300: "5m", 900: "15m"}
-    tf = tf_map.get(interval_sec)
-    if tf is None:
-        return None
-    strat_key = strategy_name_key(strategy_name)
-    return gems.get(strat_key, gems.get("parallax", {})).get(symbol, {}).get(tf)
+from execute.gem_loader import load_gems, get_runtime_profile
 
 def main() -> None:
     gems = load_gems()
-    gem = get_gem(gems, "parallax", "SPX", 300)
-    print("GEM for parallax SPX 5m:")
-    print(json.dumps(gem, indent=2))
+    print("Available runtime profiles:")
+    print(json.dumps(list(gems.get("runtime_profiles", {}).keys()), indent=2))
+    print()
+    print("GB-CRYPTO-BOT profile:")
+    print(json.dumps(get_runtime_profile("gb-crypto-bot"), indent=2))
 
 if __name__ == "__main__":
     main()

@@ -1,25 +1,17 @@
-import json
 from pathlib import Path
+import sys
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-def load_gems(path: str = "config/gb_strategy_gems.json") -> dict:
-    with (ROOT / path).open("r", encoding="utf-8") as f:
-        return json.load(f)
+import json
 
-def get_parallax_spx_5m_params() -> dict:
-    gems = load_gems()
-    return (
-        gems
-        .get("parallax", {})
-        .get("SPX", {})
-        .get("5m", {})
-        .get("params", {})
-    )
+from execute.gem_loader import get_strategy_profile
 
 def main() -> None:
-    params = get_parallax_spx_5m_params()
-    print("Parallax SPX 5m params to feed into bot:")
+    params = get_strategy_profile("combined", "SOL", "15m")
+    print("Combined SOL 15m profile:")
     print(json.dumps(params, indent=2))
 
 if __name__ == "__main__":

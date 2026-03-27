@@ -1,0 +1,167 @@
+{
+  "meta": {
+    "version": "phase1",
+    "owner": "GB-BRAIN",
+    "notes": "Canonical symbol registry for backtest, shadow live, live execution, and manual signal workflows."
+  },
+  "symbols": {
+    "BTC": {
+      "category": "crypto",
+      "aliases": [
+        "BTC",
+        "BTCUSDT",
+        "BTC-USD",
+        "XBT",
+        "bitcoin"
+      ],
+      "display_name": "Bitcoin",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "BTC-USD"
+      },
+      "brokers": {
+        "blofin": "BTC-USDT",
+        "binance": "BTCUSDT"
+      },
+      "tradingview": [
+        "BTCUSDT",
+        "BINANCE:BTCUSDT"
+      ],
+      "best_timeframes": [
+        "15m",
+        "1h"
+      ]
+    },
+    "ETH": {
+      "category": "crypto",
+      "aliases": [
+        "ETH",
+        "ETHUSDT",
+        "ETH-USD",
+        "ethereum"
+      ],
+      "display_name": "Ethereum",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "ETH-USD"
+      },
+      "brokers": {
+        "blofin": "ETH-USDT",
+        "binance": "ETHUSDT"
+      },
+      "tradingview": [
+        "ETHUSDT",
+        "BINANCE:ETHUSDT"
+      ],
+      "best_timeframes": [
+        "15m",
+        "1h"
+      ]
+    },
+    "SOL": {
+      "category": "crypto",
+      "aliases": [
+        "SOL",
+        "SOLUSDT",
+        "SOL-USD",
+        "solana"
+      ],
+      "display_name": "Solana",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "SOL-USD"
+      },
+      "brokers": {
+        "blofin": "SOL-USDT",
+        "binance": "SOLUSDT"
+      },
+      "tradingview": [
+        "SOLUSDT",
+        "BINANCE:SOLUSDT"
+      ],
+      "best_timeframes": [
+        "5m",
+        "15m"
+      ]
+    },
+    "US30": {
+      "category": "indices",
+      "aliases": [
+        "US30",
+        "^DJI",
+        "DJI",
+        "DJIA",
+        "YM"
+      ],
+      "display_name": "Dow Jones",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "^DJI"
+      },
+      "brokers": {
+        "oanda": "US30_USD"
+      },
+      "tradingview": [
+        "OANDA:US30USD",
+        "DJI"
+      ],
+      "best_timeframes": [
+        "5m",
+        "15m"
+      ]
+    },
+    "NAS100": {
+      "category": "indices",
+      "aliases": [
+        "NAS100",
+        "^NDX",
+        "NDX",
+        "NQ",
+        "NASDAQ"
+      ],
+      "display_name": "Nasdaq 100",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "^NDX"
+      },
+      "brokers": {
+        "oanda": "NAS100_USD"
+      },
+      "tradingview": [
+        "OANDA:NAS100USD",
+        "NDX"
+      ],
+      "best_timeframes": [
+        "5m",
+        "15m"
+      ]
+    },
+    "SPX500": {
+      "category": "indices",
+      "aliases": [
+        "SPX500",
+        "^GSPC",
+        "GSPC",
+        "SPX",
+        "SP500",
+        "ES"
+      ],
+      "display_name": "S&P 500",
+      "backtest": {
+        "provider": "yahoo",
+        "symbol": "^GSPC"
+      },
+      "brokers": {
+        "oanda": "SPX500_USD"
+      },
+      "tradingview": [
+        "OANDA:SPX500USD",
+        "SPX"
+      ],
+      "best_timeframes": [
+        "15m",
+        "30m"
+      ]
+    }
+  }
+}
