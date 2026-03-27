@@ -89,12 +89,14 @@ class ReplayFeed:
         df = self.load()
         if len(df) < max(seed_limit + 1, 20):
             raise ValueError(
-                f"Replay CSV too short for seed_limit={seed_limit}. rows={len(df)} "
-                f"path={self.resolve_csv_path()}"
+                f"Replay CSV too short for seed_limit={seed_limit}. "
+                f"rows={len(df)} path={self.resolve_csv_path()}"
             )
 
-        start_idx = max(seed_limit, len(df) - max_events)
+        start_idx = max(seed_limit - 1, len(df) - max_events)
+
         for idx in range(start_idx, len(df)):
-            window = df.iloc[: idx + 1].copy()
+            left = max(0, idx - seed_limit + 1)
+            window = df.iloc[left: idx + 1].copy().reset_index(drop=True)
             bar = df.iloc[idx].to_dict()
             yield window, bar
