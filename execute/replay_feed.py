@@ -52,6 +52,14 @@ class ReplayFeed:
             df = df.rename(columns=rename_map)
 
         time_col = next((c for c in _TIME_COLS if c in df.columns), None)
+
+        if time_col is None and len(df.columns) > 0:
+            first_col = df.columns[0]
+            parsed_first = pd.to_datetime(df[first_col], errors="coerce", utc=True)
+            if parsed_first.notna().sum() >= max(5, int(len(df) * 0.8)):
+                df[first_col] = parsed_first
+                time_col = first_col
+
         if time_col is None:
             raise ValueError(
                 f"Replay CSV missing datetime column. Expected one of: {_TIME_COLS}. "
