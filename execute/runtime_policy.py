@@ -38,11 +38,13 @@ def _normalize_broker_choice(choice: str | None) -> str:
         "oanda": "oanda-practice",
         "oanda-practice": "oanda-practice",
         "manual": "manual",
+        "replay": "replay",
+        "sim-replay": "replay",
+        "sim-forced": "sim-forced",
     }
     if raw not in aliases:
         raise ValueError(f"Unsupported broker choice: {choice}")
     return aliases[raw]
-
 
 def _normalize_mode_choice(choice: str | None, profile: dict) -> str:
     raw = (choice or "").strip().lower()
@@ -108,6 +110,18 @@ def resolve_runtime_policy(
         market_data_broker = "yfinance"
         observer_broker = "yfinance[manual]"
         execution_venue = "manual"
+    elif requested_broker == "replay":
+        market_data_broker = "sim-replay"
+        observer_broker = "sim-replay"
+        execution_venue = "paper-sim"
+        runtime_mode = "paper-sim"
+        notes.append("PC replay simulation mode.")
+    elif requested_broker == "sim-forced":
+        market_data_broker = "sim-forced"
+        observer_broker = "sim-forced"
+        execution_venue = "paper-sim"
+        runtime_mode = "paper-sim"
+        notes.append("Forced synthetic signal smoke mode.")
     else:
         market_data_broker = "yfinance"
         observer_broker = "yfinance"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import pandas as pd
 import importlib
 import importlib.util
 import inspect
@@ -25,6 +26,12 @@ except ModuleNotFoundError:
     from replay_feed import ReplayFeed
     from force_signal_smoke import build_forced_signal
 
+try:
+    from execute.live_observer import LiveObserver
+    from execute.paper_executor import SinglePositionPaperExecutor
+except ModuleNotFoundError:
+    from live_observer import LiveObserver
+    from paper_executor import SinglePositionPaperExecutor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -464,135 +471,179 @@ def _run_scored_methods(obj: Any, context: dict[str, Any], exact_names: list[str
     return False, None
 
 
+
+def _prepare_live_df(window_df: Any):
+    df = window_df.copy() if hasattr(window_df, "copy") else window_df
+    if df is None or not hasattr(df, "columns"):
+        return df
+
+    for time_col in ("timestamp", "datetime", "time", "date"):
+        if time_col in df.columns:
+            df[time_col] = pd.to_datetime(df[time_col], errors="coerce", utc=True)
+            df = df.dropna(subset=[time_col]).copy()
+            df = df.set_index(time_col, drop=True)
+            break
+
+    return df
 def evaluate_live_engine(window_df: Any, args: argparse.Namespace, policy: RuntimePolicy) -> Optional[dict]:
     engine_mod = load_local_module("custom_live_engine")
-    bar = _last_bar_from_window(window_df)
+    engine_cls = getattr(engine_mod, "CustomLiveEngine", None)
+    if engine_cls is None:
+        raise RuntimeError(
+            "custom_live_engine.CustomLiveEngine missing.\n\n"
+            + _module_debug_dump(engine_mod)
+        )
 
-    context = {
-        "args": args,
-        "policy": policy,
-        "window_df": window_df,
-        "bar": bar,
-        "signal": None,
-        "symbol": args.symbol,
-        "timeframe": args.timeframe,
-        "family": args.family,
-        "profile": args.profile,
-        "broker": policy.broker,
-        "execution_mode": policy.execution_mode,
-        "bot_name": policy.bot_name,
-    }
+    df = _prepare_live_df(window_df)
+    normalize = getattr(engine_mod, "normalize_ohlcv", None)
+    if callable(normalize):
+        df = normalize(df)
 
-    exact_fn_names = [
-        "run_once",
-        "evaluate_once",
-        "process_window",
-        "generate_signal",
-        "get_confirmed_signal",
-        "on_bar",
-        "on_candle",
-        "handle_bar",
-        "handle_candle",
-        "step",
-        "process",
-        "evaluate",
-        "run",
-        "__call__",
-    ]
-    keywords = ["signal", "evaluate", "process", "handle", "run", "bar", "candle", "engine", "live", "confirm"]
-
-    matched, result = _run_named_functions(engine_mod, context, exact_fn_names)
-    if matched:
-        return _normalize_signal(result)
-
-    matched, result = _run_scored_functions(engine_mod, context, exact_fn_names, keywords)
-    if matched:
-        return _normalize_signal(result)
-
-    engine_obj = _instantiate_best_class(
-        engine_mod,
-        context,
-        exact_names=["customliveengine", "liveengine", "gbliveengine", "engine", "runner", "processor"],
-        keywords=["engine", "runner", "processor", "live", "strategy"],
+    engine = engine_cls(
+        strategy_family=args.family,
+        symbol=args.symbol,
+        timeframe=args.timeframe,
     )
 
-    if engine_obj is not None:
-        matched, result = _run_named_methods(engine_obj, context, exact_fn_names)
-        if matched:
-            return _normalize_signal(result)
+    bar = _last_bar_from_window(window_df)
+    target_timestamp = None
+    if isinstance(bar, dict):
+        target_timestamp = _normalize_candle(bar).get("timestamp").isoformat()
 
-        matched, result = _run_scored_methods(engine_obj, context, exact_fn_names, keywords)
-        if matched:
-            return _normalize_signal(result)
+    latest_for_bar = getattr(engine, "latest_signal_for_bar", None)
+    if callable(latest_for_bar) and target_timestamp is not None:
+        return _normalize_signal(maybe_await(latest_for_bar(df, target_timestamp=target_timestamp)))
+
+    latest_confirmed = getattr(engine, "latest_confirmed_signal", None)
+    if callable(latest_confirmed):
+        return _normalize_signal(maybe_await(latest_confirmed(df)))
+
+    latest_signal = getattr(engine, "latest_signal", None)
+    if callable(latest_signal):
+        return _normalize_signal(maybe_await(latest_signal(df)))
+
+    run_method = getattr(engine, "run", None)
+    if callable(run_method):
+        return _normalize_signal(maybe_await(run_method(df)))
 
     raise RuntimeError(
-        "Unable to find compatible custom_live_engine entrypoint.\n\n"
+        "Unable to evaluate custom_live_engine.\n\n"
         + _module_debug_dump(engine_mod)
     )
 
+def _normalize_candle(bar: Optional[dict], fallback_price: float | None = None) -> dict[str, Any]:
+    raw = dict(bar or {})
+    ts_value = raw.get("timestamp") or raw.get("datetime") or pd.Timestamp.now(tz="UTC")
+    ts = pd.Timestamp(ts_value)
+    if ts.tzinfo is None:
+        ts = ts.tz_localize("UTC")
+    else:
+        ts = ts.tz_convert("UTC")
 
-def execute_paper_signal(signal: dict, args: argparse.Namespace, policy: RuntimePolicy, bar: Optional[dict] = None) -> Any:
-    paper_mod = load_local_module("paper_executor")
+    close = float(raw.get("close", fallback_price if fallback_price is not None else 0.0))
+    open_price = float(raw.get("open", close))
+    high = float(raw.get("high", max(open_price, close)))
+    low = float(raw.get("low", min(open_price, close)))
+    volume = float(raw.get("volume", 0.0))
 
-    context = {
-        "args": args,
-        "policy": policy,
-        "window_df": None,
-        "bar": bar,
-        "signal": signal,
-        "symbol": args.symbol,
-        "timeframe": args.timeframe,
-        "family": args.family,
-        "profile": args.profile,
-        "broker": policy.broker,
-        "execution_mode": policy.execution_mode,
-        "bot_name": policy.bot_name,
+    return {
+        "timestamp": ts,
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "close": close,
+        "volume": volume,
     }
 
-    exact_fn_names = [
-        "execute_signal",
-        "execute",
-        "submit_paper_trade",
-        "handle_signal",
-        "record_signal",
-        "record_execution",
-        "persist_signal",
-        "write_signal",
-        "process_signal",
-        "on_signal",
-        "__call__",
-    ]
-    keywords = ["execute", "submit", "handle", "record", "persist", "write", "paper", "signal", "trade", "order"]
 
-    matched, result = _run_named_functions(paper_mod, context, exact_fn_names)
-    if matched:
-        return result
+def annotate_signal(signal: dict, args: argparse.Namespace, policy: RuntimePolicy, source: str) -> dict:
+    payload = dict(signal or {})
 
-    matched, result = _run_scored_functions(paper_mod, context, exact_fn_names, keywords)
-    if matched:
-        return result
+    if "direction" not in payload:
+        side = str(payload.get("side", "")).strip().lower()
+        if side == "long":
+            payload["direction"] = 1
+        elif side == "short":
+            payload["direction"] = -1
 
-    paper_obj = _instantiate_best_class(
-        paper_mod,
-        context,
-        exact_names=["paperexecutor", "gbpaperexecutor", "executor", "papertrader", "paperbroker"],
-        keywords=["executor", "paper", "broker", "trader"],
+    if "side" not in payload and "direction" in payload:
+        payload["side"] = "long" if int(payload["direction"]) > 0 else "short"
+
+    if "entry_price" not in payload and "entry" in payload:
+        payload["entry_price"] = float(payload["entry"])
+    if "entry" not in payload and "entry_price" in payload:
+        payload["entry"] = float(payload["entry_price"])
+
+    if "stop_loss" not in payload and "stop" in payload:
+        payload["stop_loss"] = float(payload["stop"])
+    if "stop" not in payload and "stop_loss" in payload:
+        payload["stop"] = float(payload["stop_loss"])
+    if "stop_price" not in payload and "stop_loss" in payload:
+        payload["stop_price"] = float(payload["stop_loss"])
+
+    payload.setdefault("confirmed", True)
+    payload.setdefault("status", "confirmed")
+    payload.setdefault("signal_state", "confirmed")
+    payload.setdefault("reason", f"{source}_runtime_signal")
+    payload.setdefault("source", source)
+    payload.setdefault("timestamp", pd.Timestamp.now(tz="UTC").isoformat())
+    payload.setdefault(
+        "signal_id",
+        f"{source}-{args.family}-{args.symbol}-{args.timeframe}-{int(time.time())}",
     )
 
-    if paper_obj is not None:
-        matched, result = _run_named_methods(paper_obj, context, exact_fn_names)
-        if matched:
-            return result
+    payload["bot_name"] = payload.get("bot_name", policy.bot_name)
+    payload["profile"] = payload.get("profile", args.profile)
+    payload["family"] = payload.get("family", args.family)
+    payload["strategy_family"] = payload.get("strategy_family", payload["family"])
+    payload["symbol"] = payload.get("symbol", args.symbol)
+    payload["timeframe"] = payload.get("timeframe", args.timeframe)
+    payload["broker"] = policy.broker
+    payload["market"] = policy.market
+    payload["venue"] = policy.venue
+    payload["execution_mode"] = policy.execution_mode
+    payload["simulated"] = True
+    payload["signal_source"] = source
+    payload["timestamp"] = str(payload["timestamp"])
 
-        matched, result = _run_scored_methods(paper_obj, context, exact_fn_names, keywords)
-        if matched:
-            return result
+    return payload
 
-    raise RuntimeError(
-        "Unable to find compatible paper_executor entrypoint.\n\n"
-        + _module_debug_dump(paper_mod)
+
+def build_phase2d_runtime(args: argparse.Namespace, policy: RuntimePolicy) -> tuple[LiveObserver, SinglePositionPaperExecutor]:
+    observer = LiveObserver()
+    executor = SinglePositionPaperExecutor(
+        observer=observer,
+        bot_name=policy.bot_name,
+        broker=policy.broker,
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        execution_mode=policy.execution_mode,
     )
+    return observer, executor
 
+def execute_paper_signal(
+    signal: dict,
+    observer: LiveObserver,
+    executor: SinglePositionPaperExecutor,
+    args: argparse.Namespace,
+    policy: RuntimePolicy,
+) -> int:
+    candidate_id = observer.log_candidate(
+        bot_name=policy.bot_name,
+        strategy_family=args.family,
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        broker=policy.broker,
+        signal=signal,
+        status="candidate",
+    )
+    confirmation_id = observer.log_confirmation(
+        candidate_id=candidate_id,
+        confirmed=True,
+        confirmation_bar_ts=str(signal["timestamp"]),
+        payload=signal,
+    )
+    return executor.on_confirmed_signal(signal, candidate_id, confirmation_id)
 
 def log_policy(args: argparse.Namespace, policy: RuntimePolicy) -> None:
     log.info(
@@ -613,20 +664,38 @@ def run_replay(args: argparse.Namespace, policy: RuntimePolicy) -> None:
         timeframe=args.timeframe,
         csv_path=args.replay_csv,
     )
+    observer, executor = build_phase2d_runtime(args, policy)
 
     executed = 0
     checked = 0
 
     for window_df, bar in feed.iter_windows(seed_limit=args.seed_limit, max_events=args.max_events):
         checked += 1
+        candle = _normalize_candle(bar)
+        exit_reason = executor.on_candle(candle)
+        if exit_reason:
+            log.info(
+                "Replay exit | symbol=%s tf=%s broker=%s reason=%s bar=%s",
+                args.symbol,
+                args.timeframe,
+                policy.broker,
+                exit_reason,
+                candle["timestamp"].isoformat(),
+            )
+
         signal = evaluate_live_engine(window_df, args, policy)
         if signal:
             payload = annotate_signal(signal, args, policy, source="replay")
-            execute_paper_signal(payload, args, policy, bar=bar)
+            execute_paper_signal(payload, observer, executor, args, policy)
             executed += 1
             log.info(
-                "Replay executed | symbol=%s tf=%s broker=%s checked=%s executed=%s",
-                args.symbol, args.timeframe, policy.broker, checked, executed
+                "Replay executed | symbol=%s tf=%s broker=%s checked=%s executed=%s signal_ts=%s",
+                args.symbol,
+                args.timeframe,
+                policy.broker,
+                checked,
+                executed,
+                payload["timestamp"],
             )
             if args.once:
                 return
@@ -652,18 +721,22 @@ def run_sim_forced(args: argparse.Namespace, policy: RuntimePolicy) -> None:
     except Exception:
         pass
 
+    observer, executor = build_phase2d_runtime(args, policy)
     payload = annotate_signal(
         build_forced_signal(args=args, policy=policy, price=price),
         args=args,
         policy=policy,
         source="sim-forced",
     )
-    execute_paper_signal(payload, args, policy, bar={"close": price})
+    execute_paper_signal(payload, observer, executor, args, policy)
     log.info(
-        "Sim-forced executed | symbol=%s tf=%s broker=%s entry=%s",
-        args.symbol, args.timeframe, policy.broker, price
+        "Sim-forced executed | symbol=%s tf=%s broker=%s entry=%s signal_ts=%s",
+        args.symbol,
+        args.timeframe,
+        policy.broker,
+        price,
+        payload["timestamp"],
     )
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()

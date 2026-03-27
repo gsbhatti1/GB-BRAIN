@@ -21,12 +21,21 @@ class OpenPaperPosition:
 
 
 class SinglePositionPaperExecutor:
-    def __init__(self, observer: LiveObserver, bot_name: str, broker: str, symbol: str, timeframe: str) -> None:
+    def __init__(
+        self,
+        observer: LiveObserver,
+        bot_name: str,
+        broker: str,
+        symbol: str,
+        timeframe: str,
+        execution_mode: str = "paper",
+    ) -> None:
         self.observer = observer
         self.bot_name = bot_name
         self.broker = broker
         self.symbol = symbol
         self.timeframe = timeframe
+        self.execution_mode = execution_mode
         self.position: OpenPaperPosition | None = None
 
     def on_candle(self, candle: dict[str, Any]) -> str | None:
@@ -98,9 +107,11 @@ class SinglePositionPaperExecutor:
         side = "buy" if int(signal["direction"]) > 0 else "sell"
         entry_price = float(signal["entry_price"])
         stop_loss = float(signal["stop_loss"]) if signal.get("stop_loss") is not None else None
-        take_profit = float(signal["tp1"] or signal["tp2"] or signal["tp3"]) if any(
-            signal.get(k) is not None for k in ["tp1", "tp2", "tp3"]
-        ) else None
+        take_profit = (
+            float(signal["tp1"] or signal["tp2"] or signal["tp3"])
+            if any(signal.get(k) is not None for k in ["tp1", "tp2", "tp3"])
+            else None
+        )
 
         if self.position is not None and self.position.side != side:
             pos = self.position
@@ -118,7 +129,7 @@ class SinglePositionPaperExecutor:
         if self.position is None:
             execution_id = self.observer.log_execution(
                 bot_name=self.bot_name,
-                execution_mode="paper",
+                execution_mode=self.execution_mode,
                 broker=self.broker,
                 symbol=self.symbol,
                 timeframe=self.timeframe,
