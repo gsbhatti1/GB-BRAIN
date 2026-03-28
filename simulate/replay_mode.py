@@ -305,12 +305,17 @@ class ReplayMode:
                 try:
                     df = pd.read_csv(path, index_col=0, parse_dates=True)
                     df.columns = [c.lower() for c in df.columns]
+                    # Coerce OHLC to numeric — drops Yahoo Finance junk rows
+                    # (e.g. the '^DJI' ticker-name row and 'Price' label row)
+                    for _col in ("open", "high", "low", "close", "volume"):
+                        if _col in df.columns:
+                            df[_col] = pd.to_numeric(df[_col], errors="coerce")
+                    df.dropna(subset=["open", "high", "low", "close"], inplace=True)
                     # Ensure required columns exist
                     for col in ("open", "high", "low", "close"):
                         if col not in df.columns:
                             logger.error("_load_data: missing column '%s' in %s.", col, path)
                             return None
-                    df.dropna(subset=["open", "high", "low", "close"], inplace=True)
                     logger.info(
                         "_load_data: loaded %d bars from %s (range: %s → %s).",
                         len(df), path.name, df.index[0], df.index[-1],

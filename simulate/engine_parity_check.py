@@ -409,35 +409,43 @@ class ParityChecker:
         if not isinstance(gems, dict):
             return "FAIL", ["gb_strategy_gems.json root must be a JSON object (dict)"]
 
+        # gb_strategy_gems.json layout:
+        #   { "_meta": {...}, "parallax": { "US30": {params,metrics,...}, ... }, ... }
+        # Required keys (params, metrics, status, tags) live on each SYMBOL entry,
+        # not on the strategy-group level. Walk one level deeper.
         fail_count = 0
-        for gem_name, gem_data in gems.items():
-            if not isinstance(gem_data, dict):
-                notes.append(f"FAIL — '{gem_name}' value is not a dict")
-                status = "FAIL"
-                fail_count += 1
+        checked = 0
+        for group_name, group_data in gems.items():
+            # Skip _meta and any non-dict values
+            if group_name.startswith("_") or not isinstance(group_data, dict):
                 continue
-
-            missing = [k for k in self.GEM_REQUIRED_KEYS if k not in gem_data]
-            if missing:
-                notes.append(
-                    f"FAIL — '{gem_name}' missing required keys: {missing}"
-                )
-                status = "FAIL"
-                fail_count += 1
-            else:
-                # Type-check sub-keys
-                if not isinstance(gem_data.get("params"), dict):
-                    notes.append(f"WARN — '{gem_name}'.params should be a dict")
-                    if status == "PASS":
-                        status = "WARN"
-                if not isinstance(gem_data.get("tags"), list):
-                    notes.append(f"WARN — '{gem_name}'.tags should be a list")
-                    if status == "PASS":
-                        status = "WARN"
+            for sym_name, gem_data in group_data.items():
+                # Skip _description and other underscore keys
+                if sym_name.startswith("_") or not isinstance(gem_data, dict):
+                    continue
+                entry_label = f"{group_name}.{sym_name}"
+                checked += 1
+                missing = [k for k in self.GEM_REQUIRED_KEYS if k not in gem_data]
+                if missing:
+                    notes.append(
+                        f"FAIL — '{entry_label}' missing required keys: {missing}"
+                    )
+                    status = "FAIL"
+                    fail_count += 1
+                else:
+                    # Type-check sub-keys
+                    if not isinstance(gem_data.get("params"), dict):
+                        notes.append(f"WARN — '{entry_label}'.params should be a dict")
+                        if status == "PASS":
+                            status = "WARN"
+                    if not isinstance(gem_data.get("tags"), list):
+                        notes.append(f"WARN — '{entry_label}'.tags should be a list")
+                        if status == "PASS":
+                            status = "WARN"
 
         if fail_count == 0 and status == "PASS":
             notes.append(
-                f"All {len(gems)} gem entries have required keys "
+                f"All {checked} gem symbol entries have required keys "
                 f"({', '.join(self.GEM_REQUIRED_KEYS)})"
             )
 

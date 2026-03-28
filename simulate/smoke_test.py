@@ -73,7 +73,7 @@ _ENV_KEYS = [
     "BINANCE_API_KEY",
     "BINANCE_API_SECRET",
     "OANDA_ACCOUNT_ID",
-    "OANDA_API_KEY",
+    "OANDA_API_TOKEN",
     "BLOFIN_API_KEY",
     "BLOFIN_API_SECRET",
     "TELEGRAM_BOT_TOKEN",
@@ -234,12 +234,12 @@ class SmokeTest:
             ("runtime.runtime_policy",      "RuntimePolicy"),
             ("runtime.live_observer",       "LiveObserver"),
             ("runtime.weekly_calibrator",   "WeeklyCalibrator"),
-            ("execute.alpaca_bridge",       "AlpacaBridge"),
-            ("strategies.custom",           "CipherEngine"),
-            ("strategies.custom",           "ParallaxEngine"),
-            ("monitor.risk_manager",        "RiskManager"),
+            ("execute.alpaca_bridge",       "place_order"),
+            ("strategies.custom.cipher_engine",  "CipherEngine"),
+            ("strategies.custom.parallax_engine", "ParallaxEngine"),
+            ("execute.risk_manager",        "RiskManager"),
             ("monitor.dashboard",           "app"),
-            ("db.brain_db",                 "BrainDB"),
+            ("db.brain_db",                 "connect"),
             ("config.settings",             None),
         ]
 
@@ -558,7 +558,7 @@ class SmokeTest:
         print("  ── Risk Manager ─────────────────────────────────────────")
 
         try:
-            from monitor.risk_manager import RiskManager  # type: ignore
+            from execute.risk_manager import RiskManager  # type: ignore
             rm = RiskManager()
         except ImportError as exc:
             print(f"  [!] RiskManager not importable: {exc}")
@@ -584,7 +584,7 @@ class SmokeTest:
             sym   = sig.get("symbol",   self.symbol)
             strat = sig.get("strategy", "smoke")
             try:
-                allowed = rm.can_trade(symbol=sym, strategy=strat)
+                allowed = rm.can_trade()
                 icon    = "✓" if allowed else "–"
                 print(f"  [{icon}] Signal {i+1}: {sym}/{strat} → can_trade={allowed}")
             except Exception as exc:  # noqa: BLE001
