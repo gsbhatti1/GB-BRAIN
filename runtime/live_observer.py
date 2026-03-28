@@ -527,6 +527,7 @@ class LiveObserver:
 
     def _heartbeat(self) -> None:
         """Log an 'alive' ping every HEARTBEAT_INTERVAL_SECONDS seconds."""
+        import json as _json
         now = time.monotonic()
         if now - self._last_heartbeat >= HEARTBEAT_INTERVAL_SECONDS:
             ts = datetime.now(tz=timezone.utc).isoformat()
@@ -537,6 +538,19 @@ class LiveObserver:
                     fh.write(msg + "\n")
             except OSError as exc:
                 logger.warning("Could not write heartbeat to log file: %s", exc)
+            # Write JSON heartbeat for health_check.py
+            hb_path = self._db_path.parent / "observer_heartbeat.json"
+            try:
+                hb_path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = hb_path.with_suffix(".tmp")
+                with open(tmp, "w", encoding="utf-8") as fh:
+                    _json.dump(
+                        {"timestamp": ts, "mode": self.mode, "lane": self.lane_name},
+                        fh, indent=2,
+                    )
+                tmp.replace(hb_path)
+            except OSError as exc:
+                logger.warning("Could not write observer_heartbeat.json: %s", exc)
             self._last_heartbeat = now
 
     # ------------------------------------------------------------------

@@ -58,7 +58,7 @@ STATUS_SKIP = "SKIP"
 
 def _import_telegram():
     try:
-        from notifications.telegram_alert import send_alert
+        from execute.telegram_alerts import send_alert
         return send_alert
     except ImportError:
         return None
@@ -264,13 +264,13 @@ class HealthCheck:
     def check_oanda_api(self) -> dict:
         """Ping the OANDA API endpoint (requires API key for practice)."""
         import os
-        api_key     = os.getenv("OANDA_API_KEY", "")
+        api_key     = os.getenv("OANDA_API_TOKEN", "") or os.getenv("OANDA_API_KEY", "")
         practice    = os.getenv("OANDA_PRACTICE", "true").lower() in ("1", "true", "yes")
         base_url    = "https://api-fxpractice.oanda.com" if practice else "https://api-trade.oanda.com"
         url         = f"{base_url}/v3/accounts"
 
         if not api_key:
-            return {"status": STATUS_SKIP, "detail": "OANDA_API_KEY not set — skipped"}
+            return {"status": STATUS_SKIP, "detail": "OANDA_API_TOKEN not set — skipped"}
 
         return self._ping_api("OANDA", url, timeout=5, headers={"Authorization": f"Bearer {api_key}"})
 
@@ -285,18 +285,21 @@ class HealthCheck:
         headers: dict | None = None,
     ) -> dict:
         """Attempt a lightweight HTTP GET to check API reachability."""
+        import urllib.request
+        import urllib.error
         try:
-            import urllib.request
             req = urllib.request.Request(url, headers=headers or {}, method="GET")
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 code = resp.getcode()
                 if 200 <= code < 300:
                     return {"status": STATUS_OK, "detail": f"HTTP {code}"}
-                elif code in (401, 403):
-                    # Reachable but auth required — that's fine for a ping
-                    return {"status": STATUS_OK, "detail": f"Reachable (HTTP {code})"}
                 else:
                     return {"status": STATUS_WARN, "detail": f"HTTP {code}"}
+        except urllib.error.HTTPError as exc:
+            # HTTPError means the server responded — check if auth-related
+            if exc.code in (401, 403):
+                return {"status": STATUS_OK, "detail": f"Reachable (HTTP {exc.code})"}
+            return {"status": STATUS_WARN, "detail": f"HTTP {exc.code}"}
         except OSError as exc:
             # Connection refused, DNS failure, timeout
             return {"status": STATUS_FAIL, "detail": f"{name} unreachable: {exc}"}

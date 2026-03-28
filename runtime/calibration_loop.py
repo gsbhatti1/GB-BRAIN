@@ -43,7 +43,7 @@ REPORTS_DIR = ROOT / "monitor" / "reports"
 # ---------------------------------------------------------------------------
 def _import_calibrator():
     try:
-        from calibration.weekly_calibrator import WeeklyCalibrator
+        from runtime.weekly_calibrator import WeeklyCalibrator
         return WeeklyCalibrator
     except ImportError as exc:
         logger.warning("WeeklyCalibrator not found: %s", exc)
@@ -52,7 +52,7 @@ def _import_calibrator():
 
 def _import_telegram():
     try:
-        from notifications.telegram_alert import send_alert
+        from execute.telegram_alerts import send_alert
         return send_alert
     except ImportError as exc:
         logger.warning("Telegram alert not found: %s", exc)
@@ -84,7 +84,7 @@ class CalibrationLoop:
 
         WC = _import_calibrator()
         if WC:
-            self._calibrator = WC(dry_run=dry_run, days=days)
+            self._calibrator = WC(dry_run=dry_run, lookback_days=days)
         else:
             logger.warning(
                 "WeeklyCalibrator unavailable — calibration_loop will run in stub mode"
