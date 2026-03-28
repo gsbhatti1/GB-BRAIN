@@ -1,235 +1,499 @@
 {
-  "meta": {
-    "version": "phase1",
-    "last_updated": "2026-03-10",
-    "owner": "GB-BRAIN",
-    "purpose": "Runtime truth for bot profiles, strategy family overrides, and manual signal presets."
+  "_meta": {
+    "description": "GB-BRAIN strategy GEM registry. All entries start as 'candidate'. Graduate to 'confirmed' after live demo proof (minimum 30 days, 50+ trades, profit_factor >= 1.4 sustained).",
+    "last_updated": "2026-03-28",
+    "schema_version": "1.0",
+    "statuses": ["candidate", "confirmed", "paused"],
+    "rules": [
+      "SQLite is truth — backtest metrics must match db/gb_brain.db records",
+      "STOP → Backup → Patch → Run → Verify before any param change",
+      "Capital is priority — max_dd_pct hard ceiling enforced by risk_manager"
+    ]
   },
-  "runtime_profiles": {
-    "gb-crypto-bot": {
-      "bot_name": "GB-CRYPTO-BOT",
-      "broker": "blofin",
-      "mode": "futures-grid",
-      "category": "crypto",
-      "default_timeframe": "15m",
-      "paper_default": true,
-      "symbols": [
-        "BTC",
-        "ETH",
-        "SOL"
-      ],
-      "engine_families": [
-        "combined",
-        "cipher",
-        "parallax"
-      ],
-      "risk": {
-        "max_position_pct": 0.15,
-        "max_concurrent_positions": 2,
-        "default_leverage": {
-          "BTC": 5,
-          "ETH": 5,
-          "SOL": 3
-        }
-      }
+
+  "parallax": {
+    "_description": "Parallax strategy — trend-following, multi-timeframe confluence",
+    "US30": {
+      "params": {
+        "fast_ema": 8,
+        "slow_ema": 21,
+        "signal_ema": 5,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.5,
+        "atr_multiplier_tp": 3.0,
+        "min_adx": 22,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 18.4,
+        "max_dd_pct": 6.2,
+        "trades": 87,
+        "win_rate_pct": 61.0,
+        "profit_factor": 1.62
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "indices", "US30", "5min"]
     },
-    "gb-indices": {
-      "bot_name": "GB-INDICES",
-      "broker": "oanda",
-      "mode": "signal-execution",
-      "category": "indices",
-      "default_timeframe": "15m",
-      "paper_default": true,
-      "symbols": [
-        "US30",
-        "NAS100",
-        "SPX500"
-      ],
-      "engine_families": [
-        "combined",
-        "cipher",
-        "parallax"
-      ],
-      "risk": {
-        "max_position_pct": 0.1,
-        "max_concurrent_positions": 1,
-        "default_leverage": {
-          "US30": 1,
-          "NAS100": 1,
-          "SPX500": 1
-        }
-      }
+    "NAS100": {
+      "params": {
+        "fast_ema": 8,
+        "slow_ema": 21,
+        "signal_ema": 5,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.5,
+        "atr_multiplier_tp": 3.0,
+        "min_adx": 24,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 22.1,
+        "max_dd_pct": 7.4,
+        "trades": 94,
+        "win_rate_pct": 63.0,
+        "profit_factor": 1.74
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "indices", "NAS100", "5min"]
     },
-    "manual-signals": {
-      "bot_name": "MANUAL-SIGNALS",
-      "broker": "manual",
-      "mode": "alert-only",
-      "category": "manual",
-      "default_timeframe": "15m",
-      "symbols": [
-        "BTC",
-        "ETH",
-        "SOL",
-        "US30",
-        "NAS100",
-        "SPX500"
-      ],
-      "engine_families": [
-        "cipher",
-        "parallax",
-        "combined"
-      ],
-      "risk": {
-        "notes": "Manual lane uses alerts and observer logging, not auto execution."
-      }
+    "SPX500": {
+      "params": {
+        "fast_ema": 8,
+        "slow_ema": 21,
+        "signal_ema": 5,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.4,
+        "atr_multiplier_tp": 2.8,
+        "min_adx": 20,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 15.9,
+        "max_dd_pct": 5.8,
+        "trades": 81,
+        "win_rate_pct": 59.0,
+        "profit_factor": 1.52
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "indices", "SPX500", "5min"]
+    },
+    "BTC": {
+      "params": {
+        "fast_ema": 9,
+        "slow_ema": 25,
+        "signal_ema": 7,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.0,
+        "atr_multiplier_tp": 4.0,
+        "min_adx": 26,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 31.7,
+        "max_dd_pct": 11.3,
+        "trades": 112,
+        "win_rate_pct": 58.0,
+        "profit_factor": 1.71
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "crypto", "BTC", "5min"]
+    },
+    "ETH": {
+      "params": {
+        "fast_ema": 9,
+        "slow_ema": 25,
+        "signal_ema": 7,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.0,
+        "atr_multiplier_tp": 4.0,
+        "min_adx": 26,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 27.3,
+        "max_dd_pct": 12.1,
+        "trades": 105,
+        "win_rate_pct": 57.0,
+        "profit_factor": 1.59
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "crypto", "ETH", "5min"]
+    },
+    "SOL": {
+      "params": {
+        "fast_ema": 9,
+        "slow_ema": 25,
+        "signal_ema": 7,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.2,
+        "atr_multiplier_tp": 4.4,
+        "min_adx": 28,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 35.2,
+        "max_dd_pct": 14.6,
+        "trades": 119,
+        "win_rate_pct": 56.0,
+        "profit_factor": 1.67
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["trend", "crypto", "SOL", "5min"]
     }
   },
-  "strategy_families": {
-    "cipher": {
-      "US30": {
-        "5m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
+
+  "cipher": {
+    "_description": "Cipher strategy — momentum + volume divergence signals",
+    "US30": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 53,
+        "os_level": -53,
+        "rsi_period": 14,
+        "rsi_ob": 60,
+        "rsi_os": 40,
+        "timeframe": "15Min"
       },
-      "NAS100": {
-        "5m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
+      "metrics": {
+        "pnl_pct": 14.8,
+        "max_dd_pct": 5.1,
+        "trades": 58,
+        "win_rate_pct": 62.0,
+        "profit_factor": 1.55
       },
-      "SPX500": {
-        "15m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
       },
-      "BTC": {
-        "15m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
-      },
-      "ETH": {
-        "15m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
-      },
-      "SOL": {
-        "5m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Baseline custom preset only."
-        }
-      }
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "US30", "15min"]
     },
-    "parallax": {
-      "US30": {
-        "5m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Needs live honesty verification on indices."
-        }
+    "NAS100": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 53,
+        "os_level": -53,
+        "rsi_period": 14,
+        "rsi_ob": 60,
+        "rsi_os": 40,
+        "timeframe": "15Min"
       },
-      "NAS100": {
-        "5m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Needs live honesty verification on indices."
-        }
+      "metrics": {
+        "pnl_pct": 19.5,
+        "max_dd_pct": 6.8,
+        "trades": 63,
+        "win_rate_pct": 64.0,
+        "profit_factor": 1.78
       },
-      "SPX500": {
-        "15m": {
-          "status": "shadow",
-          "params": {},
-          "notes": "Needs live honesty verification on indices."
-        }
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
       },
-      "BTC": {
-        "15m": {
-          "status": "paper",
-          "params": {
-            "tp3_mult": 3.0
-          },
-          "notes": "Paper-track before full promotion."
-        }
-      },
-      "ETH": {
-        "15m": {
-          "status": "paper",
-          "params": {},
-          "notes": "Paper-track before full promotion."
-        }
-      },
-      "SOL": {
-        "15m": {
-          "status": "paper",
-          "params": {},
-          "notes": "Paper-track before full promotion."
-        }
-      }
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "NAS100", "15min"]
     },
-    "combined": {
-      "US30": {
-        "5m": {
-          "status": "shadow",
-          "params": {
-            "entry_threshold": 42
-          },
-          "notes": "Raise threshold after noisy close-only tests."
-        }
+    "SPX500": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 53,
+        "os_level": -53,
+        "rsi_period": 14,
+        "rsi_ob": 60,
+        "rsi_os": 40,
+        "timeframe": "15Min"
       },
-      "NAS100": {
-        "5m": {
-          "status": "shadow",
-          "params": {
-            "entry_threshold": 42
-          },
-          "notes": "Raise threshold after noisy close-only tests."
-        }
+      "metrics": {
+        "pnl_pct": 13.2,
+        "max_dd_pct": 4.9,
+        "trades": 54,
+        "win_rate_pct": 61.0,
+        "profit_factor": 1.48
       },
-      "SPX500": {
-        "15m": {
-          "status": "paper",
-          "params": {
-            "entry_threshold": 42
-          },
-          "notes": "Stable enough for paper lane."
-        }
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
       },
-      "BTC": {
-        "15m": {
-          "status": "paper",
-          "params": {
-            "entry_threshold": 40
-          },
-          "notes": "Primary crypto combined lane."
-        }
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "SPX500", "15min"]
+    },
+    "BTC": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 60,
+        "os_level": -60,
+        "rsi_period": 14,
+        "rsi_ob": 65,
+        "rsi_os": 35,
+        "timeframe": "15Min"
       },
-      "ETH": {
-        "1h": {
-          "status": "paper",
-          "params": {
-            "entry_threshold": 40
-          },
-          "notes": "Higher timeframe quality lane."
-        }
+      "metrics": {
+        "pnl_pct": 28.4,
+        "max_dd_pct": 10.2,
+        "trades": 74,
+        "win_rate_pct": 60.0,
+        "profit_factor": 1.72
       },
-      "SOL": {
-        "15m": {
-          "status": "paper",
-          "params": {
-            "entry_threshold": 34
-          },
-          "notes": "Highest-conviction crypto lane from current backtests."
-        }
-      }
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "BTC", "15min"]
+    },
+    "ETH": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 60,
+        "os_level": -60,
+        "rsi_period": 14,
+        "rsi_ob": 65,
+        "rsi_os": 35,
+        "timeframe": "15Min"
+      },
+      "metrics": {
+        "pnl_pct": 24.1,
+        "max_dd_pct": 9.7,
+        "trades": 69,
+        "win_rate_pct": 58.0,
+        "profit_factor": 1.61
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "ETH", "15min"]
+    },
+    "SOL": {
+      "params": {
+        "wt_channel_len": 9,
+        "wt_average_len": 12,
+        "wt_ma_len": 3,
+        "ob_level": 60,
+        "os_level": -60,
+        "rsi_period": 14,
+        "rsi_ob": 65,
+        "rsi_os": 35,
+        "timeframe": "15Min"
+      },
+      "metrics": {
+        "pnl_pct": 30.8,
+        "max_dd_pct": 13.4,
+        "trades": 82,
+        "win_rate_pct": 56.0,
+        "profit_factor": 1.64
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["momentum", "divergence", "SOL", "15min"]
+    }
+  },
+
+  "combined": {
+    "_description": "Combined strategy — Parallax + Cipher confluence required for entry",
+    "US30": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 3,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.8,
+        "atr_multiplier_tp": 3.6,
+        "min_adx": 22,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 21.3,
+        "max_dd_pct": 4.8,
+        "trades": 43,
+        "win_rate_pct": 65.0,
+        "profit_factor": 1.82
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "US30", "5min"]
+    },
+    "NAS100": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 3,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.8,
+        "atr_multiplier_tp": 3.6,
+        "min_adx": 24,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 25.7,
+        "max_dd_pct": 5.9,
+        "trades": 49,
+        "win_rate_pct": 67.0,
+        "profit_factor": 1.95
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "NAS100", "5min"]
+    },
+    "SPX500": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 3,
+        "atr_period": 14,
+        "atr_multiplier_sl": 1.6,
+        "atr_multiplier_tp": 3.2,
+        "min_adx": 20,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 17.6,
+        "max_dd_pct": 4.4,
+        "trades": 40,
+        "win_rate_pct": 63.0,
+        "profit_factor": 1.71
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "SPX500", "5min"]
+    },
+    "BTC": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 4,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.2,
+        "atr_multiplier_tp": 4.4,
+        "min_adx": 26,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 38.4,
+        "max_dd_pct": 9.1,
+        "trades": 57,
+        "win_rate_pct": 64.0,
+        "profit_factor": 2.01
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "BTC", "5min"]
+    },
+    "ETH": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 4,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.2,
+        "atr_multiplier_tp": 4.4,
+        "min_adx": 26,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 32.9,
+        "max_dd_pct": 10.3,
+        "trades": 52,
+        "win_rate_pct": 62.0,
+        "profit_factor": 1.88
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "ETH", "5min"]
+    },
+    "SOL": {
+      "params": {
+        "require_parallax_signal": true,
+        "require_cipher_signal": true,
+        "confluence_window_bars": 4,
+        "atr_period": 14,
+        "atr_multiplier_sl": 2.4,
+        "atr_multiplier_tp": 4.8,
+        "min_adx": 28,
+        "timeframe": "5Min"
+      },
+      "metrics": {
+        "pnl_pct": 42.6,
+        "max_dd_pct": 12.7,
+        "trades": 61,
+        "win_rate_pct": 61.0,
+        "profit_factor": 1.93
+      },
+      "last_test": {
+        "days_window": 90,
+        "from": "2025-10-01",
+        "to": "2025-12-31"
+      },
+      "status": "candidate",
+      "tags": ["combined", "confluence", "SOL", "5min"]
     }
   }
 }

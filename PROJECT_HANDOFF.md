@@ -1,65 +1,59 @@
-# GB-BRAIN Project Handoff — Phase 1
+# GB-BRAIN — Project Handoff
 
-## Snapshot
-- Base repo snapshot reviewed: `a59f67c8f6ce8b0eb17c13706333af77867236b2`
-- Review tag: `review-2026-03-10-v2`
-- Structural repair phase: **Phase 1 foundation**
+## Last Reviewed
+Date: 2026-03-28
+Commit: latest main branch
+Status: Phase 1–2 complete, Phase 3 in progress
 
-## What changed in this pack
-This pack introduces:
-- real docs replacing placeholders
-- shared symbol registry
-- shared gem loader
-- shared custom live engine adapter
-- live observer schema + runtime
-- weekly calibrator skeleton
-- updated gem config format
-- updated gem test scripts
+## Architecture
+One pipeline. One database. SQLite is truth.
+Harvest → Extract → Backtest → Score → Deploy → Monitor
 
-## Why this phase exists
-The repo had a split-brain problem:
-- custom backtest truth was strong
-- live execution truth was using a different signal path
+Phases:
+- Phase 1 (Core repair): DONE — structure stable, SQLite aligned, config clean
+- Phase 2 (Runtime spine): DONE — bot_runner, risk_manager, oanda/blofin/telegram wired
+- Phase 3 (PC simulation): IN PROGRESS — replay, smoke test, paper executor
+- Phase 4 (Strategy truth): PENDING
+- Phase 5 (VPS deploy): PENDING
+- Phase 6 (Exchange demo): PENDING
+- Phase 7 (Weekly calibration): PENDING
+- Phase 8 (Production hardening): PENDING
+- Phase 9 (Live rollout): PENDING
 
-Phase 1 does **not** claim to complete the full live rewrite.
-It builds the clean backbone so that Phase 2 can wire runtime execution without confusion.
+## What Changed (Recent)
+- Added alpaca_bridge.py (Alpaca broker support)
+- Added runtime/runtime_policy.py (lane-based policy system)
+- Added runtime/live_observer.py (real-time signal observer)
+- Added runtime/weekly_calibrator.py (weekly GEM promotion/demotion)
+- Added simulate/replay_mode.py (PC replay without live exchange)
+- Added simulate/smoke_test.py (forced-signal smoke testing)
+- Added simulate/paper_executor.py (paper trade simulation)
+- Added monitor/dashboard.py (Flask GEM/trade dashboard)
+- Added vps/ deployment scripts
+- Fixed PROJECT_HANDOFF.md (this file)
 
-## Known structural truths
-- Harvest/backtest lane and custom/live lane both exist
-- SQLite is already the right truth layer
-- Custom engines are the strongest research core
-- Runtime config was too weak and too fragmented
-- Placeholder docs would create future confusion
+## Known Bugs / Gaps
+- BloFin WebSocket path not yet wired to live_observer
+- Alpaca bridge tested on paper only — verify order types for indices
+- monitor/ templates need CSS polish
+- Weekly calibrator needs 30+ days of live_trades data to be meaningful
+- VPS deploy scripts written for Ubuntu 22.04 / Debian — test before using
 
-## Known limitations after Phase 1
-- `execute/bot_runner.py` and `execute/grid_bot.py` are not fully rewritten yet
-- Intrabar candidate logging still depends on how often the live runner polls
-- Paper/live execution parity is still a Phase 2 task
-- Cross-asset risk normalization still needs Phase 2 attention
+## Next Steps
+1. Run smoke test: `python simulate/smoke_test.py --symbol SPX --mode forced`
+2. Run replay: `python simulate/replay_mode.py --ticker US30 --tf 5m`
+3. Deploy to VPS: follow vps/DEPLOY.md
+4. Connect BloFin demo WebSocket
+5. Run weekly calibrator after 1 week of paper data
 
-## Next phases
-### Phase 2
-- replace live runtime path with shared custom engine truth
-- wire BloFin crypto runner and OANDA indices runner to observer tables
-- add shadow/live toggle
-- add better execution persistence
+## Open Questions
+- Which VPS provider? (DigitalOcean / Vultr / AWS recommended)
+- BloFin demo WebSocket — confirm endpoint URL with BloFin docs
+- Alpaca — need real API keys for paper account to test fills
 
-### Phase 3
-- walk-forward optimizer
-- automatic weekly promote/demote
-- VPS deployment + service manager
-- agent orchestration
-
-## Repo cleanup policy
-Delete only after proof.
-Prefer:
-- replace placeholder docs
-- remove committed review zips
-- quarantine bulky historical folders later
-- never delete the custom strategy family
-
-## Open questions
-- final BloFin leverage defaults by symbol
-- OANDA instrument naming conventions in your account
-- whether manual signal lane should use same DB or a second DB
-- whether live observer should run close-only first or intrabar from day one
+## Rules
+- SQLite is truth — all data flows through db/gb_brain.db
+- STOP → Backup → Patch → Run → Verify — no yolo changes
+- Capital is priority — risk management enforced at every level
+- Deterministic — same inputs = same outputs, always
+- .env for secrets — NEVER commit API keys
