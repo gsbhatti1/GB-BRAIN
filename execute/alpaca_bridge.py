@@ -2,8 +2,7 @@
 alpaca_bridge.py — GB-BRAIN Alpaca Broker Bridge
 =================================================
 Handles all Alpaca REST API interactions for US stocks and indices.
-
-Pattern mirrors oanda_bridge.py exactly.
+Uses alpaca-py (the official modern Alpaca SDK).
 
 Supported symbols: SPY, QQQ, DIA, NVDA (and any valid Alpaca ticker).
 Controlled via ALPACA_BASE_URL in config.settings:
@@ -22,10 +21,15 @@ Last Updated: 2026-03-28
 """
 
 import logging
+import time
 from typing import Optional
 
-import alpaca_trade_api as tradeapi
-from alpaca_trade_api.rest import APIError
+from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 
 from config import settings
 
@@ -37,7 +41,6 @@ logger = logging.getLogger("gb_brain.alpaca")
 # ---------------------------------------------------------------------------
 # Symbol mapping
 # ---------------------------------------------------------------------------
-# GB-BRAIN internal symbol  →  Alpaca tradeable symbol
 SYMBOL_MAP: dict[str, str] = {
     "SPY":    "SPY",
     "QQQ":    "QQQ",
@@ -51,7 +54,7 @@ SYMBOL_MAP: dict[str, str] = {
     "META":   "META",
     "AMD":    "AMD",
     "COIN":   "COIN",
-    "SPX":    "SPY",    # No direct SPX ETF — route to SPY
+    "SPX":    "SPY",    # Route to SPY proxy
     "NAS100": "QQQ",    # Route to QQQ proxy
     "US30":   "DIA",    # Route to DIA proxy
     "ARKK":   "ARKK",
@@ -62,56 +65,45 @@ SYMBOL_MAP: dict[str, str] = {
 }
 
 # ---------------------------------------------------------------------------
-# Timeframe mapping (GB-BRAIN string → Alpaca TimeFrame)
+# Timeframe mapping (GB-BRAIN string → alpaca-py TimeFrame)
 # ---------------------------------------------------------------------------
-_TF_MAP: dict[str, str] = {
-    "1Min":  "1Min",
-    "5Min":  "5Min",
-    "15Min": "15Min",
-    "1H":    "1Hour",
-    "1Hour": "1Hour",
-    "1D":    "1Day",
-    "1Day":  "1Day",
+_TF_MAP: dict[str, TimeFrame] = {
+    "1Min":  TimeFrame(1,  TimeFrameUnit.Minute),
+    "5Min":  TimeFrame(5,  TimeFrameUnit.Minute),
+    "15Min": TimeFrame(15, TimeFrameUnit.Minute),
+    "1H":    TimeFrame(1,  TimeFrameUnit.Hour),
+    "1Hour": TimeFrame(1,  TimeFrameUnit.Hour),
+    "1D":    TimeFrame(1,  TimeFrameUnit.Day),
+    "1Day":  TimeFrame(1,  TimeFrameUnit.Day),
 }
 
+# ---------------------------------------------------------------------------
+# Detect paper vs live from ALPACA_BASE_URL
+# ---------------------------------------------------------------------------
+def _is_paper() -> bool:
+    url = getattr(settings, "ALPACA_BASE_URL", "").lower()
+    return "paper" in url
+
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Client factories
 # ---------------------------------------------------------------------------
-
-def _get_client() -> tradeapi.REST:
-    """
-    Instantiate and return an Alpaca REST client using credentials from
-    config.settings.  The environment (paper vs live) is determined solely
-    by ALPACA_BASE_URL — no logic branch required.
-
-    Returns
-    -------
-    tradeapi.REST
-        Authenticated Alpaca REST client.
-    """
-    return tradeapi.REST(
-        key_id=settings.ALPACA_KEY,
+def _trading_client() -> TradingClient:
+    return TradingClient(
+        api_key=settings.ALPACA_KEY,
         secret_key=settings.ALPACA_SECRET,
-        base_url=settings.ALPACA_BASE_URL,
-        api_version="v2",
+        paper=_is_paper(),
+    )
+
+
+def _data_client() -> StockHistoricalDataClient:
+    return StockHistoricalDataClient(
+        api_key=settings.ALPACA_KEY,
+        secret_key=settings.ALPACA_SECRET,
     )
 
 
 def _resolve_symbol(symbol: str) -> str:
-    """
-    Translate a GB-BRAIN internal symbol to an Alpaca-tradeable symbol.
-
-    Parameters
-    ----------
-    symbol : str
-        GB-BRAIN internal symbol (e.g. "NAS100", "SPX").
-
-    Returns
-    -------
-    str
-        Alpaca tradeable symbol (e.g. "QQQ", "SPY").
-    """
     resolved = SYMBOL_MAP.get(symbol.upper(), symbol.upper())
     if resolved != symbol.upper():
         logger.debug("Symbol mapped: %s → %s", symbol, resolved)
@@ -133,24 +125,14 @@ def place_order(
 
     Parameters
     ----------
-    symbol : str
-        GB-BRAIN internal symbol (e.g. "SPY", "NVDA", "NAS100").
-    qty : float
-        Number of shares (fractional supported on Alpaca).
-    side : str
-        "buy" or "sell".
-    tag : str
-        Client order ID tag prefix for traceability. Default "GB-BRAIN".
+    symbol : str   GB-BRAIN internal symbol (e.g. "SPY", "NAS100").
+    qty    : float Number of shares (fractional supported on Alpaca).
+    side   : str   "buy" or "sell".
+    tag    : str   Client order ID tag prefix. Default "GB-BRAIN".
 
     Returns
     -------
-    dict or None
-        Order response dict on success, None on failure.
-
-    Example
-    -------
-    >>> place_order("SPY", 10, "buy")
-    {'id': '...', 'symbol': 'SPY', 'qty': '10', 'side': 'buy', ...}
+    dict or None — Order response dict on success, None on failure.
     """
     alpaca_symbol = _resolve_symbol(symbol)
     side_lower = side.lower()
@@ -158,26 +140,27 @@ def place_order(
         logger.error("Invalid side '%s' for %s — must be 'buy' or 'sell'.", side, symbol)
         return None
 
-    client_order_id = f"{tag}-{alpaca_symbol}-{side_lower}-{int(__import__('time').time())}"
+    order_side = OrderSide.BUY if side_lower == "buy" else OrderSide.SELL
+    client_order_id = f"{tag}-{alpaca_symbol}-{side_lower}-{int(time.time())}"
 
     try:
-        api = _get_client()
-        order = api.submit_order(
+        client = _trading_client()
+        req = MarketOrderRequest(
             symbol=alpaca_symbol,
             qty=qty,
-            side=side_lower,
-            type="market",
-            time_in_force="day",
+            side=order_side,
+            time_in_force=TimeInForce.DAY,
             client_order_id=client_order_id,
         )
+        order = client.submit_order(req)
         result = {
-            "id":              order.id,
-            "client_order_id": order.client_order_id,
+            "id":              str(order.id),
+            "client_order_id": str(order.client_order_id),
             "symbol":          order.symbol,
-            "qty":             order.qty,
-            "side":            order.side,
-            "type":            order.type,
-            "status":          order.status,
+            "qty":             str(order.qty),
+            "side":            order.side.value,
+            "type":            order.order_type.value,
+            "status":          order.status.value,
             "submitted_at":    str(order.submitted_at),
         }
         logger.info(
@@ -185,39 +168,27 @@ def place_order(
             side_lower.upper(), alpaca_symbol, qty, order.id, tag,
         )
         return result
-    except APIError as exc:
-        logger.error("Alpaca APIError placing order %s %s: %s", side, alpaca_symbol, exc)
-        return None
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error placing order %s %s: %s", side, alpaca_symbol, exc)
+        logger.error("Alpaca error placing order %s %s: %s", side, alpaca_symbol, exc)
         return None
 
 
 def get_account_balance() -> Optional[float]:
     """
-    Retrieve the current portfolio equity (cash + unrealized P&L) from Alpaca.
+    Retrieve the current portfolio equity from Alpaca.
 
     Returns
     -------
-    float or None
-        Account equity as a float (USD), or None on failure.
-
-    Example
-    -------
-    >>> get_account_balance()
-    24831.57
+    float or None — Account equity in USD, or None on failure.
     """
     try:
-        api = _get_client()
-        account = api.get_account()
+        client = _trading_client()
+        account = client.get_account()
         equity = float(account.equity)
         logger.debug("Account equity: $%.2f", equity)
         return equity
-    except APIError as exc:
-        logger.error("Alpaca APIError fetching account balance: %s", exc)
-        return None
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error fetching account balance: %s", exc)
+        logger.error("Alpaca error fetching account balance: %s", exc)
         return None
 
 
@@ -228,22 +199,10 @@ def get_positions() -> Optional[list[dict]]:
     Returns
     -------
     list[dict] or None
-        List of position dicts, each containing:
-            symbol          (str)   — Alpaca symbol
-            qty             (float) — number of shares held
-            avg_price       (float) — average entry price
-            current_price   (float) — latest market price
-            unrealized_pnl  (float) — unrealized P&L in USD
-        Returns None on API failure.
-
-    Example
-    -------
-    >>> get_positions()
-    [{'symbol': 'SPY', 'qty': 10.0, 'avg_price': 512.3, ...}]
     """
     try:
-        api = _get_client()
-        raw_positions = api.list_positions()
+        client = _trading_client()
+        raw_positions = client.get_all_positions()
         positions = []
         for pos in raw_positions:
             positions.append({
@@ -255,11 +214,8 @@ def get_positions() -> Optional[list[dict]]:
             })
         logger.debug("Fetched %d open positions.", len(positions))
         return positions
-    except APIError as exc:
-        logger.error("Alpaca APIError fetching positions: %s", exc)
-        return None
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error fetching positions: %s", exc)
+        logger.error("Alpaca error fetching positions: %s", exc)
         return None
 
 
@@ -267,45 +223,31 @@ def close_position(symbol: str) -> Optional[dict]:
     """
     Close an entire open position for the given symbol.
 
-    Parameters
-    ----------
-    symbol : str
-        GB-BRAIN internal symbol (e.g. "SPY", "NVDA").
-
     Returns
     -------
     dict or None
-        Closing order dict on success, None on failure or if no position exists.
-
-    Example
-    -------
-    >>> close_position("SPY")
-    {'id': '...', 'symbol': 'SPY', 'side': 'sell', 'status': 'pending_new', ...}
     """
     alpaca_symbol = _resolve_symbol(symbol)
     try:
-        api = _get_client()
-        order = api.close_position(alpaca_symbol)
+        client = _trading_client()
+        order = client.close_position(alpaca_symbol)
         result = {
-            "id":           order.id,
+            "id":           str(order.id),
             "symbol":       order.symbol,
-            "qty":          order.qty,
-            "side":         order.side,
-            "type":         order.type,
-            "status":       order.status,
+            "qty":          str(order.qty),
+            "side":         order.side.value,
+            "type":         order.order_type.value,
+            "status":       order.status.value,
             "submitted_at": str(order.submitted_at),
         }
         logger.info("Position closed: %s | order_id=%s", alpaca_symbol, order.id)
         return result
-    except APIError as exc:
-        # 422 = no position exists — not a hard error
-        if "position does not exist" in str(exc).lower() or "404" in str(exc):
+    except Exception as exc:  # noqa: BLE001
+        str_exc = str(exc).lower()
+        if "position does not exist" in str_exc or "404" in str_exc:
             logger.warning("No open position to close for %s.", alpaca_symbol)
         else:
-            logger.error("Alpaca APIError closing position %s: %s", alpaca_symbol, exc)
-        return None
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error closing position %s: %s", alpaca_symbol, exc)
+            logger.error("Alpaca error closing position %s: %s", alpaca_symbol, exc)
         return None
 
 
@@ -316,53 +258,40 @@ def get_latest_bar(
     """
     Fetch the most recent completed OHLCV bar for a symbol.
 
-    Parameters
-    ----------
-    symbol : str
-        GB-BRAIN internal symbol (e.g. "SPY", "NAS100").
-    timeframe : str
-        Bar timeframe string. Supported: "1Min", "5Min", "15Min",
-        "1H", "1Hour", "1D", "1Day". Default "5Min".
-
     Returns
     -------
     dict or None
-        OHLCV bar dict:
-            symbol  (str)   — resolved Alpaca symbol
-            time    (str)   — bar timestamp (ISO 8601)
-            open    (float)
-            high    (float)
-            low     (float)
-            close   (float)
-            volume  (int)
-        Returns None on failure.
-
-    Example
-    -------
-    >>> get_latest_bar("SPY", "5Min")
-    {'symbol': 'SPY', 'time': '2026-03-28T13:35:00Z', 'open': 513.1, ...}
     """
+    from datetime import datetime, timedelta, timezone
+
     alpaca_symbol = _resolve_symbol(symbol)
-    alpaca_tf = _TF_MAP.get(timeframe, timeframe)
+    alpaca_tf = _TF_MAP.get(timeframe, TimeFrame(5, TimeFrameUnit.Minute))
 
     try:
-        api = _get_client()
-        bars = api.get_bars(
-            alpaca_symbol,
-            alpaca_tf,
-            limit=2,          # fetch 2; last bar may be in-progress
+        client = _data_client()
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(days=5)  # wide window to ensure we get bars
+
+        req = StockBarsRequest(
+            symbol_or_symbols=alpaca_symbol,
+            timeframe=alpaca_tf,
+            start=start,
+            end=end,
+            limit=2,
             adjustment="raw",
-        ).df
+        )
+        bars_response = client.get_stock_bars(req)
+        bars = bars_response.df
 
         if bars is None or bars.empty:
-            logger.warning("No bar data returned for %s [%s].", alpaca_symbol, alpaca_tf)
+            logger.warning("No bar data for %s [%s].", alpaca_symbol, timeframe)
             return None
 
         # Use second-to-last bar — guaranteed closed
         bar = bars.iloc[-2] if len(bars) >= 2 else bars.iloc[-1]
         result = {
             "symbol": alpaca_symbol,
-            "time":   str(bar.name),  # DatetimeIndex
+            "time":   str(bar.name),
             "open":   float(bar["open"]),
             "high":   float(bar["high"]),
             "low":    float(bar["low"]),
@@ -371,13 +300,10 @@ def get_latest_bar(
         }
         logger.debug(
             "Latest bar %s [%s]: O=%.4f H=%.4f L=%.4f C=%.4f V=%d",
-            alpaca_symbol, alpaca_tf,
+            alpaca_symbol, timeframe,
             result["open"], result["high"], result["low"], result["close"], result["volume"],
         )
         return result
-    except APIError as exc:
-        logger.error("Alpaca APIError fetching bar %s [%s]: %s", alpaca_symbol, alpaca_tf, exc)
-        return None
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Unexpected error fetching bar %s [%s]: %s", alpaca_symbol, alpaca_tf, exc)
+        logger.error("Alpaca error fetching bar %s [%s]: %s", alpaca_symbol, timeframe, exc)
         return None
