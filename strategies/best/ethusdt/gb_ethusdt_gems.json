@@ -1,0 +1,69 @@
+{
+  "symbol": "ETHUSDT",
+  "gems": [
+    {
+      "id": "ethusdt_gem_5024",
+      "name": "PeetCrypto_freqtrade-stuff_Pump_detection_exemple.py_aa9753c4",
+      "strategy_id": 5024,
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 55.56,
+      "profit_factor": 1.3,
+      "total_return": 38.67,
+      "max_drawdown": -39.1,
+      "composite_score": 36.35,
+      "total_trades": 36,
+      "sharpe_ratio": 0.59,
+      "indicators": [
+        "SMA",
+        "Ichimoku"
+      ],
+      "parameters": {
+        "ma_fast": 168,
+        "ma_slow": 193,
+        "rsi_period": 19,
+        "rsi_overbought": 80,
+        "rsi_oversold": 17,
+        "bb_period": 27,
+        "bb_std": 1.9
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -39.1% or PF 1.30 below threshold"
+    },
+    {
+      "id": "ethusdt_gem_795",
+      "name": "Chande-Adaptive-Mean-Reversion-Trading-Strategy-Based-on-Chande-Momentum-Oscilla",
+      "strategy_id": 795,
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 64.29,
+      "profit_factor": 1.09,
+      "total_return": 7.58,
+      "max_drawdown": -38.61,
+      "composite_score": 32.21,
+      "total_trades": 70,
+      "sharpe_ratio": 0.15,
+      "indicators": [
+        "SMA",
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 18,
+        "ma_slow": 37,
+        "rsi_overbought": 81,
+        "rsi_oversold": 15,
+        "bb_period": 20,
+        "bb_std": 3.4
+      },
+      "entry_logic": "strategy.entry(\"Long\"",
+      "exit_logic": "strategy.close",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -38.6% or PF 1.09 below threshold"
+    }
+  ]
+}

@@ -1,0 +1,329 @@
+{
+  "symbol": "SOLUSDT",
+  "gems": [
+    {
+      "id": "solusdt_gem_3628",
+      "name": "keithorange_HUGE_FreqTrade_Strategy_Collection_ObeliskRSI_v6_1.py_b8a2a4be",
+      "strategy_id": 3628,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 70.31,
+      "profit_factor": 1.26,
+      "total_return": 48.43,
+      "max_drawdown": -40.77,
+      "composite_score": 46.46,
+      "total_trades": 64,
+      "sharpe_ratio": 0.52,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_period": 6,
+        "ma_fast": 19,
+        "ma_slow": 47,
+        "rsi_overbought": 80,
+        "rsi_oversold": 18,
+        "bb_period": 20,
+        "bb_std": 2.0
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -40.8% or PF 1.26 below threshold"
+    },
+    {
+      "id": "solusdt_gem_1351",
+      "name": "Dynamic-Multi-Indicator-Trend-Recognition-Strategy-with-Triple-Sync-Analysis",
+      "strategy_id": 1351,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 72.0,
+      "profit_factor": 1.16,
+      "total_return": 24.01,
+      "max_drawdown": -47.92,
+      "composite_score": 38.47,
+      "total_trades": 50,
+      "sharpe_ratio": 0.31,
+      "indicators": [
+        "RSI",
+        "Stochastic",
+        "ADX",
+        "CCI"
+      ],
+      "parameters": {
+        "rsi_period": 6,
+        "ma_fast": 7,
+        "ma_slow": 51,
+        "rsi_overbought": 82,
+        "rsi_oversold": 16,
+        "bb_period": 17,
+        "bb_std": 2.7
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -47.9% or PF 1.16 below threshold"
+    },
+    {
+      "id": "solusdt_gem_7351",
+      "name": "基于均线交叉的趋势追踪策略Trend-Tracking-Strategy-Based-on-Moving-Average-Crossover",
+      "strategy_id": 7351,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 68.33,
+      "profit_factor": 1.14,
+      "total_return": 21.87,
+      "max_drawdown": -41.15,
+      "composite_score": 37.26,
+      "total_trades": 60,
+      "sharpe_ratio": 0.28,
+      "indicators": [
+        "SMA",
+        "RSI"
+      ],
+      "parameters": {
+        "ma_fast": 10,
+        "ma_slow": 20,
+        "rsi_period": 5,
+        "rsi_overbought": 83,
+        "rsi_oversold": 15,
+        "bb_period": 29,
+        "bb_std": 2.5
+      },
+      "entry_logic": "ta.crossover",
+      "exit_logic": "strategy.close | ta.crossunder",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -41.1% or PF 1.14 below threshold"
+    },
+    {
+      "id": "solusdt_gem_2172",
+      "name": "hasnocool_tradingview-pine-scripts_Breakout_Trend_Trading_Strategy_-_V2",
+      "strategy_id": 2172,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 77.36,
+      "profit_factor": 1.09,
+      "total_return": 11.25,
+      "max_drawdown": -57.36,
+      "composite_score": 36.61,
+      "total_trades": 53,
+      "sharpe_ratio": 0.15,
+      "indicators": [
+        "EMA",
+        "SMA",
+        "BB",
+        "ATR",
+        "Supertrend"
+      ],
+      "parameters": {
+        "ma_fast": 15,
+        "ma_slow": 25,
+        "bb_period": 100,
+        "bb_std": 1.0,
+        "atr_period": 22,
+        "rsi_period": 16,
+        "rsi_overbought": 72,
+        "rsi_oversold": 17
+      },
+      "entry_logic": "WhenInRange? min(sellStop, sellStop[1]) : (sellStop > sellStop[1] or close > buy | WhenInRange? max(buyStop, buyStop[1]): (buyStop > buyStop[1] or close > buyStop[1]) ? buyStop[1] : buy | strategy.entry(\"Buy\"",
+      "exit_logic": "strategy.close | strategy.exit",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -57.4% or PF 1.09 below threshold"
+    },
+    {
+      "id": "solusdt_gem_4494",
+      "name": "Multi-Technical-Indicator-Trend-Following-Trading-Strategy",
+      "strategy_id": 4494,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 68.42,
+      "profit_factor": 1.13,
+      "total_return": 15.64,
+      "max_drawdown": -41.55,
+      "composite_score": 35.17,
+      "total_trades": 57,
+      "sharpe_ratio": 0.22,
+      "indicators": [
+        "SMA",
+        "RSI"
+      ],
+      "parameters": {
+        "ma_fast": 14,
+        "ma_slow": 20,
+        "rsi_period": 5,
+        "rsi_oversold": 14,
+        "rsi_overbought": 84,
+        "bb_period": 31,
+        "bb_std": 2.2
+      },
+      "entry_logic": "strategy.entry(\"Buy\" | ta.crossover",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -41.5% or PF 1.13 below threshold"
+    },
+    {
+      "id": "solusdt_gem_5553",
+      "name": "RSI-Multi-Period-RSI-Divergence-with-Support-Resistance-Quantitative-Trading-Str",
+      "strategy_id": 5553,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 64.52,
+      "profit_factor": 1.08,
+      "total_return": 9.28,
+      "max_drawdown": -43.12,
+      "composite_score": 34.5,
+      "total_trades": 93,
+      "sharpe_ratio": 0.16,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_period": 6,
+        "ma_fast": 5,
+        "ma_slow": 29,
+        "rsi_overbought": 75,
+        "rsi_oversold": 21,
+        "bb_period": 31,
+        "bb_std": 2.4
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -43.1% or PF 1.08 below threshold"
+    },
+    {
+      "id": "solusdt_gem_2123",
+      "name": "hasnocool_tradingview-pine-scripts_Bitlinc_MARSI_Study_AST_w-_Take_Profit_&_Stop",
+      "strategy_id": 2123,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 73.47,
+      "profit_factor": 1.05,
+      "total_return": 3.77,
+      "max_drawdown": -50.34,
+      "composite_score": 32.62,
+      "total_trades": 49,
+      "sharpe_ratio": 0.06,
+      "indicators": [
+        "SMA",
+        "RSI"
+      ],
+      "parameters": {
+        "ma_fast": 11,
+        "ma_slow": 35,
+        "rsi_period": 10,
+        "rsi_overbought": 74,
+        "rsi_oversold": 27,
+        "bb_period": 25,
+        "bb_std": 2.1
+      },
+      "entry_logic": "strategy.entry(\"LONG\", strategy.long, stop=close, oca_name=\"TREND\", oca_type=strategy.oca.cancel, comment=\"LONG\"",
+      "exit_logic": "strategy.exit",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -50.3% or PF 1.05 below threshold"
+    },
+    {
+      "id": "solusdt_gem_2553",
+      "name": "hasnocool_tradingview-pine-scripts_Example_of_Simple_RSI_Buy-Sell_at_a_level_and",
+      "strategy_id": 2553,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 67.12,
+      "profit_factor": 1.03,
+      "total_return": 0.34,
+      "max_drawdown": -49.13,
+      "composite_score": 31.13,
+      "total_trades": 73,
+      "sharpe_ratio": 0.01,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_period": 10,
+        "rsi_oversold": 30,
+        "ma_fast": 11,
+        "ma_slow": 50,
+        "rsi_overbought": 70,
+        "bb_period": 30,
+        "bb_std": 2.6
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "strategy.close",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -49.1% or PF 1.03 below threshold"
+    },
+    {
+      "id": "solusdt_gem_5636",
+      "name": "RSI-RSI-Indicator-Based-Short-term-Trading-Strategy",
+      "strategy_id": 5636,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 67.12,
+      "profit_factor": 1.03,
+      "total_return": 0.34,
+      "max_drawdown": -49.13,
+      "composite_score": 31.13,
+      "total_trades": 73,
+      "sharpe_ratio": 0.01,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_overbought": 70,
+        "rsi_oversold": 30,
+        "ma_fast": 11,
+        "ma_slow": 49,
+        "rsi_period": 10,
+        "bb_period": 23,
+        "bb_std": 2.5
+      },
+      "entry_logic": "strategy.entry(\"Buy\"",
+      "exit_logic": "strategy.close | strategy.exit",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -49.1% or PF 1.03 below threshold"
+    },
+    {
+      "id": "solusdt_gem_450",
+      "name": "benso87_Private-Pine-Scripts_Benso_RSI",
+      "strategy_id": 450,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 63.51,
+      "profit_factor": 1.03,
+      "total_return": 2.11,
+      "max_drawdown": -21.54,
+      "composite_score": 30.47,
+      "total_trades": 74,
+      "sharpe_ratio": 0.12,
+      "indicators": [
+        "EMA",
+        "SMA",
+        "RSI",
+        "ATR"
+      ],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 24,
+        "ma_slow": 51,
+        "rsi_overbought": 72,
+        "rsi_oversold": 32,
+        "bb_period": 24,
+        "bb_std": 1.9
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": false,
+      "deploy_notes": "MaxDD -21.5% or PF 1.03 below threshold"
+    }
+  ]
+}

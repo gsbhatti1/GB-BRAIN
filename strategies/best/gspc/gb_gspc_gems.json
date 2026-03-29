@@ -1,0 +1,326 @@
+{
+  "symbol": "^GSPC",
+  "gems": [
+    {
+      "id": "gspc_gem_4372",
+      "name": "MOST指标双仓位自适应策略MOST-Indicator-Dual-Position-Adaptive-Strategy",
+      "strategy_id": 4372,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 76.67,
+      "profit_factor": 4.47,
+      "total_return": 29.91,
+      "max_drawdown": -13.42,
+      "composite_score": 47.0,
+      "total_trades": 30,
+      "sharpe_ratio": 0.8,
+      "indicators": [
+        "RSI",
+        "CCI"
+      ],
+      "parameters": {
+        "ma_fast": 18,
+        "ma_slow": 27,
+        "rsi_period": 11,
+        "rsi_overbought": 74,
+        "rsi_oversold": 28,
+        "bb_period": 21,
+        "bb_std": 3.4
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_3044",
+      "name": "Ichimoku-Ichimoku-Cloud-and-Bollinger-Bands-Combination-Trading-Strategy",
+      "strategy_id": 3044,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 80.7,
+      "profit_factor": 2.25,
+      "total_return": 29.59,
+      "max_drawdown": -16.51,
+      "composite_score": 45.9,
+      "total_trades": 57,
+      "sharpe_ratio": 0.8,
+      "indicators": [
+        "SMA",
+        "BB",
+        "Ichimoku"
+      ],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 10,
+        "ma_slow": 23,
+        "rsi_overbought": 70,
+        "rsi_oversold": 30,
+        "bb_period": 15,
+        "bb_std": 2.2
+      },
+      "entry_logic": "strategy.entry(\"Long\"",
+      "exit_logic": "strategy.exit",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_7055",
+      "name": "双重趋势追踪策略Dual-Trend-Tracking-Strategy",
+      "strategy_id": 7055,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 81.48,
+      "profit_factor": 2.45,
+      "total_return": 27.0,
+      "max_drawdown": -10.31,
+      "composite_score": 45.57,
+      "total_trades": 54,
+      "sharpe_ratio": 0.84,
+      "indicators": [
+        "BB",
+        "Stochastic"
+      ],
+      "parameters": {
+        "rsi_oversold": 5,
+        "ma_fast": 8,
+        "ma_slow": 40,
+        "rsi_period": 11,
+        "rsi_overbought": 71,
+        "bb_period": 26,
+        "bb_std": 1.9
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_7400",
+      "name": "基于布林带和-StochRSI-指标的高频交易策略High-Frequency-Trading-Strategy-Based-on-Bollinger-Band",
+      "strategy_id": 7400,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 81.48,
+      "profit_factor": 2.45,
+      "total_return": 27.0,
+      "max_drawdown": -10.31,
+      "composite_score": 45.57,
+      "total_trades": 54,
+      "sharpe_ratio": 0.84,
+      "indicators": [
+        "SMA",
+        "RSI",
+        "BB",
+        "Stochastic"
+      ],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 7,
+        "ma_slow": 36,
+        "rsi_overbought": 81,
+        "rsi_oversold": 18,
+        "bb_period": 26,
+        "bb_std": 1.9
+      },
+      "entry_logic": "strategy.entry(\"Buy\"",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_6528",
+      "name": "Universal-Sniper-Strategy",
+      "strategy_id": 6528,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 83.87,
+      "profit_factor": 2.68,
+      "total_return": 25.53,
+      "max_drawdown": -15.26,
+      "composite_score": 44.7,
+      "total_trades": 31,
+      "sharpe_ratio": 0.71,
+      "indicators": [
+        "EMA",
+        "BB"
+      ],
+      "parameters": {
+        "ma_fast": 21,
+        "ma_slow": 29,
+        "rsi_period": 13,
+        "rsi_overbought": 68,
+        "rsi_oversold": 23,
+        "bb_period": 16,
+        "bb_std": 2.5
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_7577",
+      "name": "boll_1_2",
+      "strategy_id": 7577,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 83.87,
+      "profit_factor": 2.68,
+      "total_return": 25.53,
+      "max_drawdown": -15.26,
+      "composite_score": 44.7,
+      "total_trades": 31,
+      "sharpe_ratio": 0.71,
+      "indicators": [
+        "BB"
+      ],
+      "parameters": {
+        "ma_fast": 5,
+        "ma_slow": 47,
+        "rsi_period": 15,
+        "rsi_overbought": 69,
+        "rsi_oversold": 20,
+        "bb_period": 16,
+        "bb_std": 2.5
+      },
+      "entry_logic": "if (mp == 0 && close > midPrice) return 1; //If there is no position, and the closing price is greater than the upper track, open long",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_7605",
+      "name": "boll傻瓜版",
+      "strategy_id": 7605,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 83.87,
+      "profit_factor": 2.68,
+      "total_return": 25.53,
+      "max_drawdown": -15.26,
+      "composite_score": 44.7,
+      "total_trades": 31,
+      "sharpe_ratio": 0.71,
+      "indicators": [
+        "BB"
+      ],
+      "parameters": {
+        "ma_fast": 5,
+        "ma_slow": 47,
+        "rsi_period": 15,
+        "rsi_overbought": 69,
+        "rsi_oversold": 20,
+        "bb_period": 16,
+        "bb_std": 2.5
+      },
+      "entry_logic": "if (mp == 0 && close > midPrice) return 1; //If there is no position, and the closing price is greater than the upper track, open long",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_5681",
+      "name": "RSI-RSI-Trading-Strategy",
+      "strategy_id": 5681,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 82.5,
+      "profit_factor": 2.68,
+      "total_return": 24.66,
+      "max_drawdown": -10.83,
+      "composite_score": 44.63,
+      "total_trades": 40,
+      "sharpe_ratio": 0.92,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "ma_fast": 22,
+        "ma_slow": 40,
+        "rsi_period": 11,
+        "rsi_overbought": 66,
+        "rsi_oversold": 28,
+        "bb_period": 15,
+        "bb_std": 2.6
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_4717",
+      "name": "Paul-The-Gambler-Lévy-Gold-Edition",
+      "strategy_id": 4717,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 79.41,
+      "profit_factor": 2.96,
+      "total_return": 27.6,
+      "max_drawdown": -9.42,
+      "composite_score": 44.54,
+      "total_trades": 34,
+      "sharpe_ratio": 0.98,
+      "indicators": [
+        "RSI"
+      ],
+      "parameters": {
+        "rsi_period": 14,
+        "ma_fast": 5,
+        "ma_slow": 34,
+        "rsi_overbought": 65,
+        "rsi_oversold": 31,
+        "bb_period": 19,
+        "bb_std": 2.1
+      },
+      "entry_logic": "not extracted",
+      "exit_logic": "not extracted",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    },
+    {
+      "id": "gspc_gem_2401",
+      "name": "hasnocool_tradingview-pine-scripts_Crypto_rsi_cci_mf_stoch_rsi_oscillators_all_i",
+      "strategy_id": 2401,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 88.57,
+      "profit_factor": 2.78,
+      "total_return": 17.83,
+      "max_drawdown": -6.84,
+      "composite_score": 44.53,
+      "total_trades": 35,
+      "sharpe_ratio": 0.85,
+      "indicators": [
+        "SMA",
+        "RSI",
+        "Stochastic",
+        "CCI"
+      ],
+      "parameters": {
+        "rsi_period": 8,
+        "ma_fast": 17,
+        "ma_slow": 24,
+        "rsi_overbought": 69,
+        "rsi_oversold": 20,
+        "bb_period": 19,
+        "bb_std": 2.3
+      },
+      "entry_logic": "strategy.entry('long'",
+      "exit_logic": "strategy.close",
+      "deploy_ready": true,
+      "deploy_notes": "OK"
+    }
+  ]
+}

@@ -1,499 +1,268 @@
 {
   "_meta": {
-    "description": "GB-BRAIN strategy GEM registry. All entries start as 'candidate'. Graduate to 'confirmed' after live demo proof (minimum 30 days, 50+ trades, profit_factor >= 1.4 sustained).",
-    "last_updated": "2026-03-28",
-    "schema_version": "1.0",
-    "statuses": ["candidate", "confirmed", "paused"],
-    "rules": [
-      "SQLite is truth — backtest metrics must match db/gb_brain.db records",
-      "STOP → Backup → Patch → Run → Verify before any param change",
-      "Capital is priority — max_dd_pct hard ceiling enforced by risk_manager"
-    ]
-  },
-
-  "parallax": {
-    "_description": "Parallax strategy — trend-following, multi-timeframe confluence",
-    "US30": {
-      "params": {
-        "fast_ema": 8,
-        "slow_ema": 21,
-        "signal_ema": 5,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.5,
-        "atr_multiplier_tp": 3.0,
-        "min_adx": 22,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 18.4,
-        "max_dd_pct": 6.2,
-        "trades": 87,
-        "win_rate_pct": 61.0,
-        "profit_factor": 1.62
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "indices", "US30", "5min"]
-    },
-    "NAS100": {
-      "params": {
-        "fast_ema": 8,
-        "slow_ema": 21,
-        "signal_ema": 5,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.5,
-        "atr_multiplier_tp": 3.0,
-        "min_adx": 24,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 22.1,
-        "max_dd_pct": 7.4,
-        "trades": 94,
-        "win_rate_pct": 63.0,
-        "profit_factor": 1.74
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "indices", "NAS100", "5min"]
-    },
-    "SPX500": {
-      "params": {
-        "fast_ema": 8,
-        "slow_ema": 21,
-        "signal_ema": 5,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.4,
-        "atr_multiplier_tp": 2.8,
-        "min_adx": 20,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 15.9,
-        "max_dd_pct": 5.8,
-        "trades": 81,
-        "win_rate_pct": 59.0,
-        "profit_factor": 1.52
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "indices", "SPX500", "5min"]
-    },
-    "BTC": {
-      "params": {
-        "fast_ema": 9,
-        "slow_ema": 25,
-        "signal_ema": 7,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.0,
-        "atr_multiplier_tp": 4.0,
-        "min_adx": 26,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 31.7,
-        "max_dd_pct": 11.3,
-        "trades": 112,
-        "win_rate_pct": 58.0,
-        "profit_factor": 1.71
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "crypto", "BTC", "5min"]
-    },
-    "ETH": {
-      "params": {
-        "fast_ema": 9,
-        "slow_ema": 25,
-        "signal_ema": 7,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.0,
-        "atr_multiplier_tp": 4.0,
-        "min_adx": 26,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 27.3,
-        "max_dd_pct": 12.1,
-        "trades": 105,
-        "win_rate_pct": 57.0,
-        "profit_factor": 1.59
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "crypto", "ETH", "5min"]
-    },
-    "SOL": {
-      "params": {
-        "fast_ema": 9,
-        "slow_ema": 25,
-        "signal_ema": 7,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.2,
-        "atr_multiplier_tp": 4.4,
-        "min_adx": 28,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 35.2,
-        "max_dd_pct": 14.6,
-        "trades": 119,
-        "win_rate_pct": 56.0,
-        "profit_factor": 1.67
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["trend", "crypto", "SOL", "5min"]
+    "version": "2.0",
+    "generated": "2026-03-29",
+    "note": "Real harvested GEMs from PC backtest DB (8185 strategies, 64092 results). Only ^GSPC has enough quality GEMs to deploy. Crypto GEMs have MaxDD > 39% — kept as candidates only. Parallax/Cipher/Combined retained for BTC/US30/NAS100 until harvest improves.",
+    "sources": {
+      "GSPC": "591 GEMs in DB, top 3 selected by composite_score with MaxDD < 20%",
+      "SOLUSDT": "18 GEMs in DB, best score 46.46 but MaxDD -40.77% — candidate only",
+      "ETHUSDT": "2 GEMs in DB, best score 36.35 but MaxDD -39.1% — candidate only",
+      "BTCUSDT": "0 GEMs in DB",
+      "US30": "0 GEMs in DB",
+      "NAS100": "0 GEMs in DB"
     }
   },
 
-  "cipher": {
-    "_description": "Cipher strategy — momentum + volume divergence signals",
-    "US30": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 53,
-        "os_level": -53,
-        "rsi_period": 14,
-        "rsi_ob": 60,
-        "rsi_os": 40,
-        "timeframe": "15Min"
+  "^GSPC": [
+    {
+      "id": "gspc_gem_1",
+      "name": "MOST_Dual_Position_Adaptive",
+      "source_name": "MOST指标双仓位自适应策略MOST-Indicator-Dual-Position-Adaptive-Strategy",
+      "strategy_id": 4372,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 76.67,
+      "profit_factor": 4.47,
+      "total_return": 29.91,
+      "max_drawdown": -13.42,
+      "composite_score": 47.0,
+      "total_trades": 30,
+      "sharpe_ratio": 0.8,
+      "indicators": ["RSI", "CCI"],
+      "parameters": {
+        "ma_fast": 18,
+        "ma_slow": 27,
+        "rsi_period": 11,
+        "rsi_overbought": 74,
+        "rsi_oversold": 28,
+        "bb_period": 21,
+        "bb_std": 3.0
       },
-      "metrics": {
-        "pnl_pct": 14.8,
-        "max_dd_pct": 5.1,
-        "trades": 58,
-        "win_rate_pct": 62.0,
-        "profit_factor": 1.55
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "US30", "15min"]
+      "deploy_ready": true,
+      "notes": "Best overall: high PF 4.47, low MaxDD -13.4%, solid WR 76.7%"
     },
-    "NAS100": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 53,
-        "os_level": -53,
-        "rsi_period": 14,
-        "rsi_ob": 60,
-        "rsi_os": 40,
-        "timeframe": "15Min"
+    {
+      "id": "gspc_gem_2",
+      "name": "Ichimoku_BB_Combination",
+      "source_name": "Ichimoku-Ichimoku-Cloud-and-Bollinger-Bands-Combination-Trading-Strategy",
+      "strategy_id": 3044,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 80.7,
+      "profit_factor": 2.25,
+      "total_return": 29.59,
+      "max_drawdown": -16.51,
+      "composite_score": 45.9,
+      "total_trades": 57,
+      "sharpe_ratio": 0.8,
+      "indicators": ["SMA", "BB", "Ichimoku"],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 10,
+        "ma_slow": 23,
+        "rsi_overbought": 70,
+        "rsi_oversold": 30,
+        "bb_period": 15,
+        "bb_std": 2.2
       },
-      "metrics": {
-        "pnl_pct": 19.5,
-        "max_dd_pct": 6.8,
-        "trades": 63,
-        "win_rate_pct": 64.0,
-        "profit_factor": 1.78
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "NAS100", "15min"]
+      "deploy_ready": true,
+      "notes": "High WR 80.7%, 57 trades — more signal volume than #1"
     },
-    "SPX500": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 53,
-        "os_level": -53,
-        "rsi_period": 14,
-        "rsi_ob": 60,
-        "rsi_os": 40,
-        "timeframe": "15Min"
+    {
+      "id": "gspc_gem_3",
+      "name": "Dual_Trend_Tracking_BB_Stoch",
+      "source_name": "双重趋势追踪策略Dual-Trend-Tracking-Strategy",
+      "strategy_id": 7055,
+      "symbol": "^GSPC",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 81.48,
+      "profit_factor": 2.45,
+      "total_return": 27.0,
+      "max_drawdown": -10.31,
+      "composite_score": 45.57,
+      "total_trades": 54,
+      "sharpe_ratio": 0.84,
+      "indicators": ["BB", "Stochastic"],
+      "parameters": {
+        "rsi_oversold": 5,
+        "ma_fast": 8,
+        "ma_slow": 40,
+        "rsi_period": 11,
+        "rsi_overbought": 71,
+        "bb_period": 26,
+        "bb_std": 1.9
       },
-      "metrics": {
-        "pnl_pct": 13.2,
-        "max_dd_pct": 4.9,
-        "trades": 54,
-        "win_rate_pct": 61.0,
-        "profit_factor": 1.48
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "SPX500", "15min"]
-    },
-    "BTC": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 60,
-        "os_level": -60,
-        "rsi_period": 14,
-        "rsi_ob": 65,
-        "rsi_os": 35,
-        "timeframe": "15Min"
-      },
-      "metrics": {
-        "pnl_pct": 28.4,
-        "max_dd_pct": 10.2,
-        "trades": 74,
-        "win_rate_pct": 60.0,
-        "profit_factor": 1.72
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "BTC", "15min"]
-    },
-    "ETH": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 60,
-        "os_level": -60,
-        "rsi_period": 14,
-        "rsi_ob": 65,
-        "rsi_os": 35,
-        "timeframe": "15Min"
-      },
-      "metrics": {
-        "pnl_pct": 24.1,
-        "max_dd_pct": 9.7,
-        "trades": 69,
-        "win_rate_pct": 58.0,
-        "profit_factor": 1.61
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "ETH", "15min"]
-    },
-    "SOL": {
-      "params": {
-        "wt_channel_len": 9,
-        "wt_average_len": 12,
-        "wt_ma_len": 3,
-        "ob_level": 60,
-        "os_level": -60,
-        "rsi_period": 14,
-        "rsi_ob": 65,
-        "rsi_os": 35,
-        "timeframe": "15Min"
-      },
-      "metrics": {
-        "pnl_pct": 30.8,
-        "max_dd_pct": 13.4,
-        "trades": 82,
-        "win_rate_pct": 56.0,
-        "profit_factor": 1.64
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["momentum", "divergence", "SOL", "15min"]
+      "deploy_ready": true,
+      "notes": "Lowest MaxDD of top 3 (-10.3%), best Sharpe 0.84"
     }
-  },
+  ],
 
-  "combined": {
-    "_description": "Combined strategy — Parallax + Cipher confluence required for entry",
-    "US30": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 3,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.8,
-        "atr_multiplier_tp": 3.6,
-        "min_adx": 22,
-        "timeframe": "5Min"
+  "ETHUSDT": [
+    {
+      "id": "eth_gem_1",
+      "name": "PeetCrypto_Pump_Detection",
+      "source_name": "PeetCrypto_freqtrade-stuff_Pump_detection_exemple.py_aa9753c4",
+      "strategy_id": 5024,
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 55.56,
+      "profit_factor": 1.3,
+      "total_return": 38.67,
+      "max_drawdown": -39.1,
+      "composite_score": 36.35,
+      "total_trades": 36,
+      "sharpe_ratio": 0.59,
+      "indicators": ["SMA", "Ichimoku"],
+      "parameters": {
+        "ma_fast": 168,
+        "ma_slow": 193,
+        "rsi_period": 19,
+        "rsi_overbought": 80,
+        "rsi_oversold": 17,
+        "bb_period": 27,
+        "bb_std": 2.0
       },
-      "metrics": {
-        "pnl_pct": 21.3,
-        "max_dd_pct": 4.8,
-        "trades": 43,
-        "win_rate_pct": 65.0,
-        "profit_factor": 1.82
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "US30", "5min"]
+      "deploy_ready": false,
+      "notes": "CANDIDATE ONLY — MaxDD -39.1% too high for live. Use Parallax/Combined until better ETH strategies harvested."
     },
-    "NAS100": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 3,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.8,
-        "atr_multiplier_tp": 3.6,
-        "min_adx": 24,
-        "timeframe": "5Min"
+    {
+      "id": "eth_gem_2",
+      "name": "Chande_Adaptive_Mean_Reversion",
+      "source_name": "Chande-Adaptive-Mean-Reversion-Trading-Strategy-Based-on-Chande-Momentum",
+      "strategy_id": 795,
+      "symbol": "ETHUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 64.29,
+      "profit_factor": 1.09,
+      "total_return": 7.58,
+      "max_drawdown": -38.61,
+      "composite_score": 32.21,
+      "total_trades": 70,
+      "sharpe_ratio": 0.15,
+      "indicators": ["SMA", "RSI"],
+      "parameters": {
+        "rsi_period": 5,
+        "ma_fast": 18,
+        "ma_slow": 37,
+        "rsi_overbought": 81,
+        "rsi_oversold": 15,
+        "bb_period": 20,
+        "bb_std": 3.4
       },
-      "metrics": {
-        "pnl_pct": 25.7,
-        "max_dd_pct": 5.9,
-        "trades": 49,
-        "win_rate_pct": 67.0,
-        "profit_factor": 1.95
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "NAS100", "5min"]
-    },
-    "SPX500": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 3,
-        "atr_period": 14,
-        "atr_multiplier_sl": 1.6,
-        "atr_multiplier_tp": 3.2,
-        "min_adx": 20,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 17.6,
-        "max_dd_pct": 4.4,
-        "trades": 40,
-        "win_rate_pct": 63.0,
-        "profit_factor": 1.71
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "SPX500", "5min"]
-    },
-    "BTC": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 4,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.2,
-        "atr_multiplier_tp": 4.4,
-        "min_adx": 26,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 38.4,
-        "max_dd_pct": 9.1,
-        "trades": 57,
-        "win_rate_pct": 64.0,
-        "profit_factor": 2.01
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "BTC", "5min"]
-    },
-    "ETH": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 4,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.2,
-        "atr_multiplier_tp": 4.4,
-        "min_adx": 26,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 32.9,
-        "max_dd_pct": 10.3,
-        "trades": 52,
-        "win_rate_pct": 62.0,
-        "profit_factor": 1.88
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "ETH", "5min"]
-    },
-    "SOL": {
-      "params": {
-        "require_parallax_signal": true,
-        "require_cipher_signal": true,
-        "confluence_window_bars": 4,
-        "atr_period": 14,
-        "atr_multiplier_sl": 2.4,
-        "atr_multiplier_tp": 4.8,
-        "min_adx": 28,
-        "timeframe": "5Min"
-      },
-      "metrics": {
-        "pnl_pct": 42.6,
-        "max_dd_pct": 12.7,
-        "trades": 61,
-        "win_rate_pct": 61.0,
-        "profit_factor": 1.93
-      },
-      "last_test": {
-        "days_window": 90,
-        "from": "2025-10-01",
-        "to": "2025-12-31"
-      },
-      "status": "candidate",
-      "tags": ["combined", "confluence", "SOL", "5min"]
+      "deploy_ready": false,
+      "notes": "CANDIDATE ONLY — PF 1.09 near breakeven, MaxDD -38.6%. Do not deploy."
     }
-  }
+  ],
+
+  "SOLUSDT": [
+    {
+      "id": "sol_gem_1",
+      "name": "ObeliskRSI_v6",
+      "source_name": "keithorange_HUGE_FreqTrade_Strategy_Collection_ObeliskRSI_v6_1.py",
+      "strategy_id": 3628,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 70.31,
+      "profit_factor": 1.26,
+      "total_return": 48.43,
+      "max_drawdown": -40.77,
+      "composite_score": 46.46,
+      "total_trades": 64,
+      "sharpe_ratio": 0.52,
+      "indicators": ["RSI"],
+      "parameters": {
+        "rsi_period": 6,
+        "ma_fast": 19,
+        "ma_slow": 47,
+        "rsi_overbought": 80,
+        "rsi_oversold": 18,
+        "bb_period": 20,
+        "bb_std": 2.0
+      },
+      "deploy_ready": false,
+      "notes": "CANDIDATE ONLY — MaxDD -40.77% unacceptable for live. Best SOL harvest score but needs better risk filter."
+    },
+    {
+      "id": "sol_gem_2",
+      "name": "Dynamic_Multi_Indicator_Trend",
+      "source_name": "Dynamic-Multi-Indicator-Trend-Recognition-Strategy-with-Triple-Sync",
+      "strategy_id": 1351,
+      "symbol": "SOLUSDT",
+      "timeframe": "1h",
+      "status": "GEM",
+      "win_rate": 72.0,
+      "profit_factor": 1.16,
+      "total_return": 24.01,
+      "max_drawdown": -47.92,
+      "composite_score": 38.47,
+      "total_trades": 50,
+      "sharpe_ratio": 0.31,
+      "indicators": ["RSI", "Stochastic", "ADX", "CCI"],
+      "parameters": {
+        "rsi_period": 6,
+        "ma_fast": 7,
+        "ma_slow": 51,
+        "rsi_overbought": 82,
+        "rsi_oversold": 16,
+        "bb_period": 17,
+        "bb_std": 2.7
+      },
+      "deploy_ready": false,
+      "notes": "CANDIDATE ONLY — MaxDD -47.9% too high."
+    }
+  ],
+
+  "BTCUSDT": [
+    {
+      "id": "btc_placeholder",
+      "name": "parallax",
+      "source_name": "Parallax (manual TradingView strategy — placeholder)",
+      "strategy_id": null,
+      "symbol": "BTCUSDT",
+      "timeframe": "1h",
+      "status": "placeholder",
+      "win_rate": null,
+      "profit_factor": null,
+      "deploy_ready": false,
+      "notes": "0 GEMs harvested for BTC. Harvest more BTC-specific freqtrade strategies."
+    }
+  ],
+
+  "US30": [
+    {
+      "id": "us30_placeholder",
+      "name": "parallax",
+      "source_name": "Parallax (manual TradingView strategy — placeholder)",
+      "strategy_id": null,
+      "symbol": "US30",
+      "timeframe": "5m",
+      "status": "placeholder",
+      "win_rate": null,
+      "profit_factor": null,
+      "deploy_ready": false,
+      "notes": "0 GEMs harvested for US30. OANDA demo running with Parallax placeholder."
+    }
+  ],
+
+  "NAS100": [
+    {
+      "id": "nas100_placeholder",
+      "name": "parallax",
+      "source_name": "Parallax (manual TradingView strategy — placeholder)",
+      "strategy_id": null,
+      "symbol": "NAS100",
+      "timeframe": "1h",
+      "status": "placeholder",
+      "win_rate": null,
+      "profit_factor": null,
+      "deploy_ready": false,
+      "notes": "0 GEMs harvested for NAS100."
+    }
+  ]
 }
