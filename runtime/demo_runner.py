@@ -15,6 +15,7 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import sqlite3
 import sys
@@ -26,7 +27,6 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv
-
 load_dotenv(ROOT / ".env")
 
 logger = logging.getLogger("gb_brain.demo")
@@ -43,11 +43,30 @@ DB_PATH = ROOT / "db" / "gb_brain.db"
 
 
 # ---------------------------------------------------------------------------
-# Lazy imports — bridges may not exist yet; guard gracefully
+# Lazy imports — all with correct GB-BRAIN module paths
 # ---------------------------------------------------------------------------
+
 def _import_blofin_bridge():
     try:
-        from brokers.blofin_bridge import BloFinBridge
+        import execute.blofin_bridge as _bb
+        # blofin_bridge is module-level functions — wrap in adapter
+        class BloFinBridge:
+            def get_latest_candle(self, symbol, timeframe):
+                # blofin_bridge has get_price or similar
+                try:
+                    price = _bb.get_ticker_price(symbol) if hasattr(_bb, 'get_ticker_price') else None
+                except Exception:
+                    price = None
+                if price is None:
+                    return None
+                return {"open": price, "high": price, "low": price,
+                        "close": price, "volume": 0}
+            def place_order(self, symbol=None, side="BUY", size=1.0, order_type="market", **kw):
+                try:
+                    return _bb.place_order(symbol, size if side == "BUY" else -abs(size))
+                except Exception as exc:
+                    logger.error("BloFin order error: %s", exc)
+                    return None
         return BloFinBridge
     except ImportError as exc:
         logger.warning("BloFinBridge not found: %s", exc)
@@ -56,7 +75,27 @@ def _import_blofin_bridge():
 
 def _import_oanda_bridge():
     try:
-        from brokers.oanda_bridge import OandaBridge
+        import execute.oanda_bridge as _ob
+        # oanda_bridge is module-level functions — wrap in adapter
+        class OandaBridge:
+            def get_latest_candle(self, symbol, timeframe):
+                try:
+                    price = _ob.get_price(symbol)
+                except Exception:
+                    price = None
+                if price is None:
+                    return None
+                return {"open": price, "high": price, "low": price,
+                        "close": price, "volume": 0}
+            def place_order(self, instrument=None, units=1, order_type="MARKET",
+                            symbol=None, side="BUY", size=1.0, **kw):
+                sym = instrument or symbol or ""
+                u   = units if units != 1 else (size if side == "BUY" else -abs(size))
+                try:
+                    return _ob.place_order(sym, u)
+                except Exception as exc:
+                    logger.error("OANDA order error: %s", exc)
+                    return None
         return OandaBridge
     except ImportError as exc:
         logger.warning("OandaBridge not found: %s", exc)
@@ -65,16 +104,16 @@ def _import_oanda_bridge():
 
 def _import_engine():
     try:
-        from engine.signal_engine import SignalEngine
-        return SignalEngine
+        from strategies.custom.combined_engine import CombinedEngine
+        return CombinedEngine
     except ImportError as exc:
-        logger.warning("SignalEngine not found: %s", exc)
+        logger.warning("CombinedEngine not found: %s", exc)
         return None
 
 
 def _import_risk_manager():
     try:
-        from risk.risk_manager import RiskManager
+        from execute.risk_manager import RiskManager
         return RiskManager
     except ImportError as exc:
         logger.warning("RiskManager not found: %s", exc)
@@ -92,7 +131,7 @@ def _import_runtime_policy():
 
 def _import_telegram():
     try:
-        from notifications.telegram_alert import send_alert
+        from execute.telegram_alerts import send_alert
         return send_alert
     except ImportError as exc:
         logger.warning("Telegram alert not found: %s", exc)
@@ -116,8 +155,8 @@ class DemoRunner:
     Orchestrates demo/practice trading for a single broker + symbol + timeframe.
 
     Routing:
-      - blofin  → BloFinBridge(use_demo=True)
-      - oanda   → OandaBridge (practice environment)
+      - blofin  → BloFinBridge (demo mode)
+      - oanda   → OandaBridge  (practice environment)
 
     Every fill is persisted in live_trades with source='demo' so fill_tracker
     and slippage_check can analyse execution quality.
@@ -143,7 +182,9 @@ class DemoRunner:
         self.timeframe = timeframe
         self.strategy  = strategy
 
-        # Wired-up components (may be None if not yet installed)
+        # Derive lane name from broker
+        self._lane_name = "GB-INDICES" if broker == "oanda" else "GB-CRYPTO-BOT"
+
         self._engine      = None
         self._risk_mgr    = None
         self._policy      = None
@@ -178,46 +219,53 @@ class DemoRunner:
         if RM:
             self._risk_mgr = RM()
 
-        # Signal engine
-        SE = _import_engine()
-        if SE:
-            self._engine = SE(symbol=self.symbol, timeframe=self.timeframe, strategy=self.strategy)
+        # Signal engine — CombinedEngine takes a preset dict
+        CE = _import_engine()
+        if CE:
+            gems_path = ROOT / "config" / "gb_strategy_gems.json"
+            try:
+                gems   = json.loads(gems_path.read_text(encoding="utf-8"))
+                preset = gems.get("combined", {}).get(self.symbol, {}).get("params", {})
+            except Exception:
+                preset = {}
+            self._engine = CE(preset=preset) if preset else None
+            if self._engine is None:
+                logger.warning(
+                    "No preset found for combined/%s — signal engine disabled", self.symbol
+                )
 
         # Broker bridge
         if self.broker == "blofin":
             BF = _import_blofin_bridge()
             if BF:
-                self._bridge = BF(use_demo=True)
+                self._bridge = BF()
         else:
             OA = _import_oanda_bridge()
             if OA:
-                self._bridge = OA()  # OandaBridge uses practice env by default via .env
+                self._bridge = OA()
 
     def _ensure_schema(self):
-        """Create live_trades table if it doesn't exist."""
+        """Ensure live_trades has all columns demo_runner needs."""
         conn = sqlite3.connect(DB_PATH)
         try:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS live_trades (
-                    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                    run_at        TEXT    NOT NULL,
-                    broker        TEXT    NOT NULL,
-                    symbol        TEXT    NOT NULL,
-                    timeframe     TEXT,
-                    strategy      TEXT,
-                    side          TEXT,
-                    signal_price  REAL,
-                    fill_price    REAL,
-                    units         REAL,
-                    slippage_pts  REAL,
-                    slippage_pct  REAL,
-                    order_id      TEXT,
-                    status        TEXT,
-                    source        TEXT    DEFAULT 'demo',
-                    raw_signal    TEXT,
-                    raw_result    TEXT
-                )
-            """)
+            # Add any missing columns (ALTER TABLE is safe on existing columns)
+            existing = {r[1] for r in conn.execute("PRAGMA table_info(live_trades);")}
+            needed = [
+                ("signal_price", "REAL"),
+                ("fill_price",   "REAL"),
+                ("slippage_pts", "REAL"),
+                ("slippage_pct", "REAL"),
+                ("source",       "TEXT"),
+                ("run_at",       "TEXT"),
+                ("order_id",     "TEXT"),
+                ("units",        "REAL"),
+                ("raw_signal",   "TEXT"),
+                ("raw_result",   "TEXT"),
+            ]
+            for col, typ in needed:
+                if col not in existing:
+                    conn.execute(f"ALTER TABLE live_trades ADD COLUMN {col} {typ};")
+                    logger.debug("Added column live_trades.%s", col)
             conn.commit()
         finally:
             conn.close()
@@ -226,18 +274,10 @@ class DemoRunner:
     # Main loop
     # ------------------------------------------------------------------
     def run(self):
-        """
-        Main trading loop:
-          1. Check kill switch + policy gate
-          2. Fetch latest candle from bridge
-          3. Run signal engine
-          4. If signal → place demo order → log fill
-          5. Check daily risk limits after each fill
-          6. Sleep POLL_INTERVAL seconds
-          7. On KeyboardInterrupt → print daily summary
-        """
         logger.info("Starting demo loop — %s %s %s", self.broker, self.symbol, self.timeframe)
-        self._send_telegram(f"[DEMO START] {self.broker.upper()} {self.symbol} {self.timeframe} — demo runner started")
+        self._send_telegram(
+            f"[DEMO START] {self.broker.upper()} {self.symbol} {self.timeframe} — demo runner started"
+        )
 
         try:
             while True:
@@ -260,11 +300,15 @@ class DemoRunner:
             logger.warning("Kill switch is %s — skipping tick", state)
             return
 
-        # 2. Runtime policy gate
+        # 2. Runtime policy gate — can_trade(lane, trades_today)
         if self._policy:
-            lane_ok = self._policy.is_lane_enabled(self.symbol, self.strategy)
+            lane = self._policy.get_lane(self._lane_name, self.symbol, self.strategy)
+            lane_ok = self._policy.can_trade(lane, 0)
             if not lane_ok:
-                logger.debug("Lane %s/%s disabled by policy — skipping", self.symbol, self.strategy)
+                logger.debug(
+                    "Lane %s/%s/%s disabled by policy — skipping",
+                    self._lane_name, self.symbol, self.strategy,
+                )
                 return
 
         # 3. Fetch candle
@@ -277,9 +321,9 @@ class DemoRunner:
         if signal is None or signal.get("action") == "HOLD":
             return
 
-        # 5. Risk check
+        # 5. Risk check — can_trade() returns (bool, reason_str)
         if self._risk_mgr:
-            allowed, reason = self._risk_mgr.check_trade(signal)
+            allowed, reason = self._risk_mgr.can_trade()
             if not allowed:
                 logger.info("Risk manager blocked trade: %s", reason)
                 return
@@ -292,30 +336,49 @@ class DemoRunner:
         # 7. Log fill
         self._log_fill(order_result, signal)
 
-        # 8. Check daily loss after fill
-        if self._risk_mgr and self._risk_mgr.daily_loss_exceeded():
+        # 8. Check daily loss after fill — use RiskManager state
+        if self._risk_mgr and self._risk_mgr.state.is_halted:
             logger.warning("Daily loss limit hit — halting demo runner")
             self._send_telegram(f"[DEMO HALT] {self.symbol} daily loss limit reached")
             raise KeyboardInterrupt
 
     def _fetch_candle(self):
-        """Fetch the latest closed candle from the bridge."""
         if self._bridge is None:
             logger.debug("No bridge available — cannot fetch candle")
             return None
         try:
-            candle = self._bridge.get_latest_candle(self.symbol, self.timeframe)
-            return candle
+            return self._bridge.get_latest_candle(self.symbol, self.timeframe)
         except Exception as exc:
             logger.error("Candle fetch error: %s", exc)
             return None
 
     def _generate_signal(self, candle):
-        """Run the signal engine against the latest candle."""
         if self._engine is None:
             return None
         try:
-            return self._engine.evaluate(candle)
+            import pandas as pd
+            # CombinedEngine.run() takes a DataFrame
+            if isinstance(candle, dict):
+                df = pd.DataFrame([candle])
+                for col in ("open", "high", "low", "close", "volume"):
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors="coerce")
+            else:
+                df = candle
+            results = self._engine.run(df)
+            if not results:
+                return {"action": "HOLD"}
+            sig = results[-1]
+            direction = getattr(sig, "direction", 0)
+            return {
+                "action":      "BUY" if direction == 1 else ("SELL" if direction == -1 else "HOLD"),
+                "direction":   direction,
+                "entry_price": getattr(sig, "entry_price", 0),
+                "stop_loss":   getattr(sig, "stop_loss",   0),
+                "tp1":         getattr(sig, "tp1",         0),
+                "tp3":         getattr(sig, "tp3",         0),
+                "score":       getattr(sig, "score",       0),
+            }
         except Exception as exc:
             logger.error("Signal engine error: %s", exc)
             return None
@@ -324,11 +387,6 @@ class DemoRunner:
     # Order placement
     # ------------------------------------------------------------------
     def _place_demo_order(self, signal: dict):
-        """
-        Route the signal to the appropriate demo/practice broker bridge.
-
-        Returns the raw order_result dict from the bridge, or None on failure.
-        """
         if self._bridge is None:
             logger.warning("No bridge configured — cannot place demo order")
             return None
@@ -354,7 +412,6 @@ class DemoRunner:
                 result = self._bridge.place_order(
                     instrument=self.symbol,
                     units=units if side == "BUY" else -abs(units),
-                    order_type="MARKET",
                 )
             return result
         except Exception as exc:
@@ -366,11 +423,8 @@ class DemoRunner:
     # Fill logging
     # ------------------------------------------------------------------
     def _log_fill(self, order_result: dict, signal: dict):
-        """Persist fill data to live_trades with source='demo'."""
         if order_result is None:
             return
-
-        import json
 
         signal_price = signal.get("entry_price", signal.get("price"))
         fill_price   = (
@@ -378,10 +432,14 @@ class DemoRunner:
             or order_result.get("avgPx")
             or order_result.get("price")
         )
-        side         = signal.get("side", signal.get("action", "BUY")).upper()
-        units        = signal.get("units", signal.get("size", 1.0))
-        order_id     = order_result.get("ordId") or order_result.get("id") or order_result.get("orderID")
-        status       = order_result.get("state") or order_result.get("status") or "filled"
+        side     = signal.get("side", signal.get("action", "BUY")).upper()
+        units    = signal.get("units", signal.get("size", 1.0))
+        order_id = (
+            order_result.get("ordId")
+            or order_result.get("id")
+            or order_result.get("orderID")
+        )
+        status   = order_result.get("state") or order_result.get("status") or "filled"
 
         slippage_pts, slippage_pct = self._compute_slippage(signal_price, fill_price)
 
@@ -420,7 +478,8 @@ class DemoRunner:
 
         logger.info(
             "[FILL] %s %s @ %.5f (signal=%.5f slip=%.4f%%)",
-            side, self.symbol, fill_price or 0, signal_price or 0, slippage_pct or 0,
+            side, self.symbol,
+            fill_price or 0, signal_price or 0, slippage_pct or 0,
         )
         self._send_telegram(
             f"[DEMO FILL] {self.broker.upper()} {side} {units} {self.symbol}\n"
@@ -431,11 +490,6 @@ class DemoRunner:
     # Slippage
     # ------------------------------------------------------------------
     def _compute_slippage(self, signal_price, fill_price):
-        """
-        Returns (slippage_pts, slippage_pct).
-        Both are absolute (unsigned) values.
-        Returns (0.0, 0.0) if either price is missing.
-        """
         if signal_price is None or fill_price is None:
             return 0.0, 0.0
         try:
@@ -453,9 +507,6 @@ class DemoRunner:
     # Daily summary
     # ------------------------------------------------------------------
     def _daily_summary(self):
-        """
-        Query live_trades for today's demo fills, compute stats, log + Telegram.
-        """
         today = date.today().isoformat()
         conn  = sqlite3.connect(DB_PATH)
         try:
@@ -508,15 +559,12 @@ class DemoRunner:
 
 
 # ---------------------------------------------------------------------------
-# CLI helpers
+# CLI
 # ---------------------------------------------------------------------------
 def list_demo_accounts():
     print("=== Demo / Practice Accounts ===")
-    print(f"  BloFin demo  — symbols: {sorted(BLOFIN_SYMBOLS)}")
+    print(f"  BloFin demo    — symbols: {sorted(BLOFIN_SYMBOLS)}")
     print(f"  OANDA practice — symbols: {sorted(OANDA_SYMBOLS)}")
-    print("Configure credentials in .env:")
-    print("  BLOFIN_API_KEY, BLOFIN_API_SECRET, BLOFIN_PASSPHRASE (demo flag in bridge)")
-    print("  OANDA_API_KEY, OANDA_ACCOUNT_ID, OANDA_PRACTICE=true")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -525,22 +573,21 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--broker",  choices=list(VALID_BROKERS), help="Broker to use")
-    p.add_argument("--symbol",  help="Trading symbol, e.g. ETH, US30")
-    p.add_argument("--tf",      default="5m", choices=list(VALID_TFS), help="Candle timeframe")
+    p.add_argument("--broker",   choices=list(VALID_BROKERS), help="Broker to use")
+    p.add_argument("--symbol",   help="Trading symbol, e.g. ETH, US30")
+    p.add_argument("--tf",       default="5m", choices=list(VALID_TFS), help="Candle timeframe")
     p.add_argument("--strategy", default="combined", help="Strategy name (default: combined)")
-    p.add_argument("--list-demo-accounts", action="store_true", help="Print demo account info and exit")
-    p.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging verbosity",
-    )
+    p.add_argument("--list-demo-accounts", action="store_true",
+                   help="Print demo account info and exit")
+    p.add_argument("--log-level", default="INFO",
+                   choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                   help="Logging level")
     return p
 
 
 def main():
-    args = _build_parser().parse_args()
+    parser = _build_parser()
+    args   = parser.parse_args()
 
     logging.basicConfig(
         level=getattr(logging, args.log_level),
@@ -552,15 +599,8 @@ def main():
         list_demo_accounts()
         return
 
-    if not args.broker:
-        print("ERROR: --broker is required unless --list-demo-accounts is set")
-        _build_parser().print_help()
-        sys.exit(1)
-
-    if not args.symbol:
-        print("ERROR: --symbol is required unless --list-demo-accounts is set")
-        _build_parser().print_help()
-        sys.exit(1)
+    if not args.broker or not args.symbol:
+        parser.error("--broker and --symbol are required")
 
     runner = DemoRunner(
         broker=args.broker,
