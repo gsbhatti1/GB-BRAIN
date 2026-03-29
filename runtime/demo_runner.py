@@ -34,9 +34,10 @@ logger = logging.getLogger("gb_brain.demo")
 # ---------------------------------------------------------------------------
 # Broker routing constants
 # ---------------------------------------------------------------------------
-BLOFIN_SYMBOLS = {"ETH", "BTC", "SOL"}
-OANDA_SYMBOLS  = {"NAS100", "US30", "SPX500"}
-VALID_BROKERS  = {"blofin", "oanda"}
+BLOFIN_SYMBOLS  = {"ETH", "BTC", "SOL"}
+OANDA_SYMBOLS   = {"NAS100", "US30", "SPX500"}
+ALPACA_SYMBOLS  = {"^GSPC", "SPY", "QQQ", "AAPL", "TSLA"}
+VALID_BROKERS   = {"blofin", "oanda", "alpaca"}
 VALID_TFS      = {"1m", "3m", "5m", "15m", "30m", "1h", "4h"}
 
 DB_PATH = ROOT / "db" / "gb_brain.db"
@@ -101,6 +102,84 @@ def _import_oanda_bridge():
         logger.warning("OandaBridge not found: %s", exc)
         return None
 
+
+
+def _import_alpaca_bridge():
+    try:
+        import execute.alpaca_bridge as _ab
+        class AlpacaBridge:
+            def get_latest_candle(self, symbol, timeframe):
+                try:
+                    price = _ab.get_price(symbol)
+                except Exception:
+                    price = None
+                if price is None:
+                    return None
+                return {"open": price, "high": price, "low": price,
+                        "close": price, "volume": 0}
+            def place_order(self, symbol=None, side="BUY", size=1, order_type="market", **kw):
+                try:
+                    qty = size if side == "BUY" else -abs(size)
+                    return _ab.place_order(symbol, qty)
+                except Exception as exc:
+                    logger.error("Alpaca order error: %s", exc)
+                    return None
+        return AlpacaBridge
+    except ImportError as exc:
+        logger.warning("AlpacaBridge not found: %s", exc)
+        return None
+
+
+def _import_alpaca_bridge():
+    try:
+        import execute.alpaca_bridge as _ab
+        class AlpacaBridge:
+            def get_latest_candle(self, symbol, timeframe):
+                try:
+                    price = _ab.get_price(symbol)
+                except Exception:
+                    price = None
+                if price is None:
+                    return None
+                return {"open": price, "high": price, "low": price,
+                        "close": price, "volume": 0}
+            def place_order(self, symbol=None, side="BUY", size=1, order_type="market", **kw):
+                try:
+                    qty = size if side == "BUY" else -abs(size)
+                    return _ab.place_order(symbol, qty)
+                except Exception as exc:
+                    logger.error("Alpaca order error: %s", exc)
+                    return None
+        return AlpacaBridge
+    except ImportError as exc:
+        logger.warning("AlpacaBridge not found: %s", exc)
+        return None
+
+
+def _import_alpaca_bridge():
+    try:
+        import execute.alpaca_bridge as _ab
+        class AlpacaBridge:
+            def get_latest_candle(self, symbol, timeframe):
+                try:
+                    price = _ab.get_price(symbol)
+                except Exception:
+                    price = None
+                if price is None:
+                    return None
+                return {"open": price, "high": price, "low": price,
+                        "close": price, "volume": 0}
+            def place_order(self, symbol=None, side="BUY", size=1, order_type="market", **kw):
+                try:
+                    qty = size if side == "BUY" else -abs(size)
+                    return _ab.place_order(symbol, qty)
+                except Exception as exc:
+                    logger.error("Alpaca order error: %s", exc)
+                    return None
+        return AlpacaBridge
+    except ImportError as exc:
+        logger.warning("AlpacaBridge not found: %s", exc)
+        return None
 
 def _import_engine():
     try:
@@ -183,7 +262,12 @@ class DemoRunner:
         self.strategy  = strategy
 
         # Derive lane name from broker
-        self._lane_name = "GB-INDICES" if broker == "oanda" else "GB-CRYPTO-BOT"
+        if broker == "oanda":
+            self._lane_name = "GB-INDICES"
+        elif broker == "alpaca":
+            self._lane_name = "GB-INDICES"
+        else:
+            self._lane_name = "GB-CRYPTO-BOT"
 
         self._engine      = None
         self._risk_mgr    = None
@@ -253,6 +337,10 @@ class DemoRunner:
             BF = _import_blofin_bridge()
             if BF:
                 self._bridge = BF()
+        elif self.broker == "alpaca":
+            AB = _import_alpaca_bridge()
+            if AB:
+                self._bridge = AB()
         else:
             OA = _import_oanda_bridge()
             if OA:
@@ -422,6 +510,12 @@ class DemoRunner:
                     size=units,
                     order_type="market",
                 )
+            elif self.broker == "alpaca":
+                result = self._bridge.place_order(
+                    symbol=self.symbol,
+                    side=side,
+                    size=units,
+                )
             else:  # oanda
                 result = self._bridge.place_order(
                     instrument=self.symbol,
@@ -579,6 +673,9 @@ def list_demo_accounts():
     print("=== Demo / Practice Accounts ===")
     print(f"  BloFin demo    — symbols: {sorted(BLOFIN_SYMBOLS)}")
     print(f"  OANDA practice — symbols: {sorted(OANDA_SYMBOLS)}")
+    print(f"  Alpaca paper   — symbols: {sorted(ALPACA_SYMBOLS)}")
+    print(f"  Alpaca paper   — symbols: {sorted(ALPACA_SYMBOLS)}")
+    print(f"  Alpaca paper   — symbols: {sorted(ALPACA_SYMBOLS)}")
 
 
 def _build_parser() -> argparse.ArgumentParser:
